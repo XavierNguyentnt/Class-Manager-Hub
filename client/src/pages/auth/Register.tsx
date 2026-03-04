@@ -12,6 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+import logoImg from "@assets/image_1772599459362.png";
+
 const registerSchema = api.auth.register.input;
 
 export default function Register() {
@@ -40,8 +42,8 @@ export default function Register() {
     <div className="min-h-screen w-full flex flex-col justify-center items-center bg-gradient-to-br from-background to-secondary/30 p-4">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-primary to-indigo-500 text-white flex items-center justify-center font-bold text-2xl shadow-lg shadow-primary/25">
-            L
+          <div className="w-20 h-20 rounded-xl overflow-hidden flex items-center justify-center shadow-lg shadow-primary/25">
+            <img src={logoImg} alt="Logo" className="w-full h-full object-cover" />
           </div>
         </div>
 

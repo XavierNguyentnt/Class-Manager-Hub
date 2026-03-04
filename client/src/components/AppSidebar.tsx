@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
+import logoImg from "@assets/image_1772599459362.png";
+
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
@@ -27,10 +29,10 @@ export function AppSidebar() {
   return (
     <Sidebar variant="inset" className="border-r border-border/50 bg-sidebar/50 backdrop-blur-xl">
       <SidebarHeader className="p-4 flex flex-row items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-bold text-lg shadow-md shadow-primary/20">
-          L
+        <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center shadow-md">
+          <img src={logoImg} alt="Logo" className="w-full h-full object-cover" />
         </div>
-        <span className="font-display font-bold text-xl tracking-tight text-foreground">Lizza LMS</span>
+        <span className="font-display font-bold text-xl tracking-tight text-foreground">Vĩnh Xuân</span>
       </SidebarHeader>
       
       <SidebarContent>

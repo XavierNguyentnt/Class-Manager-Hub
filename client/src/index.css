@@ -9,53 +9,53 @@
     --font-sans: 'Plus Jakarta Sans', sans-serif;
     --font-display: 'Outfit', sans-serif;
 
-    /* Clean Minimal Light Theme with Indigo Accents */
-    --background: 210 40% 98%; /* Very light slate/blueish background */
-    --foreground: 222.2 84% 4.9%;
+    /* Dark Green Theme */
+    --background: 150 20% 98%; 
+    --foreground: 160 84% 4.9%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 160 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 160 84% 4.9%;
     
-    /* Primary: Indigo 600 */
-    --primary: 243 75% 59%; 
-    --primary-foreground: 210 40% 98%;
+    /* Primary: Dark Green #1a4331 (approx 153 44% 18%) */
+    --primary: 153 44% 18%; 
+    --primary-foreground: 0 0% 100%;
     
-    /* Secondary: Soft Blue */
-    --secondary: 214 32% 91%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary: Soft Sage */
+    --secondary: 150 20% 92%;
+    --secondary-foreground: 160 47.4% 11.2%;
     
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 150 20% 96.1%;
+    --muted-foreground: 160 16.3% 40%;
     
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 150 20% 94%;
+    --accent-foreground: 160 47.4% 11.2%;
     
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 243 75% 59%;
+    --border: 150 20% 90%;
+    --input: 150 20% 90%;
+    --ring: 153 44% 18%;
 
     --radius: 0.75rem;
 
     /* Chart Colors */
-    --chart-1: 243 75% 59%; /* Indigo */
-    --chart-2: 199 89% 48%; /* Light Blue */
+    --chart-1: 153 44% 18%; /* Dark Green */
+    --chart-2: 160 40% 45%; /* Sage Green */
     --chart-3: 142 71% 45%; /* Green for income */
     --chart-4: 346 87% 60%; /* Red for expense */
     --chart-5: 43 74% 66%;
 
     /* Sidebar Variables */
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 243 75% 59%;
+    --sidebar-foreground: 160 5.3% 26.1%;
+    --sidebar-primary: 153 44% 18%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 243 75% 59%;
+    --sidebar-accent: 160 4.8% 95.9%;
+    --sidebar-accent-foreground: 160 5.9% 10%;
+    --sidebar-border: 160 13% 91%;
+    --sidebar-ring: 153 44% 18%;
   }
 
   .dark {
@@ -65,23 +65,23 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 243 75% 59%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
+    --primary: 153 44% 18%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 160 30% 15%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
+    --muted: 160 30% 15%;
+    --muted-foreground: 160 20.2% 65.1%;
+    --accent: 160 30% 15%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 243 75% 59%;
+    --border: 160 30% 15%;
+    --input: 160 30% 15%;
+    --ring: 153 44% 18%;
     
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 243 75% 59%;
+    --sidebar-background: 160 30% 10%;
+    --sidebar-foreground: 160 4.8% 95.9%;
+    --sidebar-primary: 153 44% 18%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 240 3.7% 15.9%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;

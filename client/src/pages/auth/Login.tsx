@@ -12,6 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { BookOpen, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+import logoImg from "@assets/image_1772599459362.png";
+
 const loginSchema = api.auth.login.input;
 
 export default function Login() {
@@ -41,13 +43,13 @@ export default function Login() {
       {/* Background decoration */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[100px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-500/5 blur-[100px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-emerald-500/5 blur-[100px]" />
       </div>
 
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-primary to-indigo-500 text-white flex items-center justify-center font-bold text-2xl shadow-lg shadow-primary/25">
-            L
+          <div className="w-20 h-20 rounded-xl overflow-hidden flex items-center justify-center shadow-lg shadow-primary/25">
+            <img src={logoImg} alt="Logo" className="w-full h-full object-cover" />
           </div>
         </div>
 
