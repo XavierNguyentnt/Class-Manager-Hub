@@ -46,7 +46,7 @@ export async function registerRoutes(
   );
 
   passport.serializeUser((user: any, done) => done(null, user.id));
-  passport.deserializeUser(async (id: number, done) => {
+  passport.deserializeUser(async (id: string, done) => {
     try {
       const user = await storage.getUser(id);
       done(null, user);
@@ -132,7 +132,7 @@ export async function registerRoutes(
   });
 
   app.get(api.classes.get.path, requireAuth, async (req: any, res) => {
-    const cls = await storage.getClass(Number(req.params.id));
+    const cls = await storage.getClass(req.params.id);
     if (!cls || cls.teacherId !== req.user.id) {
       return res.status(404).json({ message: "Class not found" });
     }
@@ -140,7 +140,7 @@ export async function registerRoutes(
   });
 
   app.get(api.classes.dashboard.path, requireAuth, async (req: any, res) => {
-    const classId = Number(req.params.id);
+    const classId = req.params.id;
     const cls = await storage.getClass(classId);
     if (!cls || cls.teacherId !== req.user.id) {
       return res.status(404).json({ message: "Class not found" });
@@ -194,7 +194,7 @@ export async function registerRoutes(
 
   // Students
   app.get(api.students.list.path, requireAuth, async (req: any, res) => {
-    const classId = Number(req.params.classId);
+    const classId = req.params.classId;
     const cls = await storage.getClass(classId);
     if (!cls || cls.teacherId !== req.user.id) {
       return res.status(404).json({ message: "Class not found" });
@@ -205,7 +205,7 @@ export async function registerRoutes(
 
   app.post(api.students.create.path, requireAuth, async (req: any, res) => {
     try {
-      const classId = Number(req.params.classId);
+      const classId = req.params.classId;
       const cls = await storage.getClass(classId);
       if (!cls || cls.teacherId !== req.user.id) {
         return res.status(404).json({ message: "Class not found" });
@@ -213,10 +213,19 @@ export async function registerRoutes(
       const input = api.students.create.input.parse(req.body);
       const student = await storage.createStudent({
         ...input,
-        dateOfBirth: input.dateOfBirth ?? null,
-        phone: input.phone ?? null,
-        parentPhone: input.parentPhone ?? null,
-        note: input.note ?? null,
+        dateOfBirth: input.dateOfBirth || null,
+        phone: input.phone || null,
+        parentPhone: input.parentPhone || null,
+        note: input.note || null,
+        nationality: input.nationality || null,
+        startDate: input.startDate || null,
+        level: input.level || null,
+        healthStatus: input.healthStatus || null,
+        address: input.address || null,
+        occupation: input.occupation || null,
+        height: input.height || null,
+        weight: input.weight || null,
+        trainingStatus: input.trainingStatus || null,
         classId,
       });
       res.status(201).json(student);
@@ -230,7 +239,7 @@ export async function registerRoutes(
 
   // Transactions
   app.get(api.transactions.list.path, requireAuth, async (req: any, res) => {
-    const classId = Number(req.params.classId);
+    const classId = req.params.classId;
     const cls = await storage.getClass(classId);
     if (!cls || cls.teacherId !== req.user.id) {
       return res.status(404).json({ message: "Class not found" });
@@ -241,7 +250,7 @@ export async function registerRoutes(
 
   app.post(api.transactions.create.path, requireAuth, async (req: any, res) => {
     try {
-      const classId = Number(req.params.classId);
+      const classId = req.params.classId;
       const cls = await storage.getClass(classId);
       if (!cls || cls.teacherId !== req.user.id) {
         return res.status(404).json({ message: "Class not found" });
@@ -267,7 +276,7 @@ export async function registerRoutes(
 
   // Attendance
   app.get(api.attendances.list.path, requireAuth, async (req: any, res) => {
-    const classId = Number(req.params.classId);
+    const classId = req.params.classId;
     const cls = await storage.getClass(classId);
     if (!cls || cls.teacherId !== req.user.id) {
       return res.status(404).json({ message: "Class not found" });
@@ -279,7 +288,7 @@ export async function registerRoutes(
 
   app.post(api.attendances.create.path, requireAuth, async (req: any, res) => {
     try {
-      const classId = Number(req.params.classId);
+      const classId = req.params.classId;
       const cls = await storage.getClass(classId);
       if (!cls || cls.teacherId !== req.user.id) {
         return res.status(404).json({ message: "Class not found" });
@@ -328,20 +337,40 @@ async function seedDatabase() {
     });
 
     const student1 = await storage.createStudent({
-      fullName: "Nguyen Van A",
+      firstName: "Van A",
+      lastName: "Nguyen",
       dateOfBirth: "2000-01-01",
       phone: "0123456789",
       parentPhone: null,
       note: "Good student",
+      nationality: null,
+      startDate: null,
+      level: null,
+      healthStatus: null,
+      address: null,
+      occupation: null,
+      height: null,
+      weight: null,
+      trainingStatus: null,
       classId: cls.id,
     });
 
     const student2 = await storage.createStudent({
-      fullName: "Tran Thi B",
+      firstName: "Thi B",
+      lastName: "Tran",
       dateOfBirth: "2001-05-15",
       phone: "0987654321",
       parentPhone: "0999888777",
       note: "",
+      nationality: null,
+      startDate: null,
+      level: null,
+      healthStatus: null,
+      address: null,
+      occupation: null,
+      height: null,
+      weight: null,
+      trainingStatus: null,
       classId: cls.id,
     });
 

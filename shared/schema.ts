@@ -1,71 +1,71 @@
-import {
-  pgTable,
-  text,
-  serial,
-  integer,
-  numeric,
-  timestamp,
-  date,
-} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { pgTable, text, uuid, numeric, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   fullName: text("full_name").notNull(),
-  role: text("role").notNull().default("TEACHER"), // TEACHER | CLASS_MONITOR | ADMIN
+  role: text("role").notNull().default("TEACHER"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const classes = pgTable("classes", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   description: text("description"),
-  teacherId: integer("teacher_id")
+  teacherId: uuid("teacher_id")
     .notNull()
     .references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const classMonitors = pgTable("class_monitors", {
-  id: serial("id").primaryKey(),
-  classId: integer("class_id")
+  id: uuid("id").primaryKey().defaultRandom(),
+  classId: uuid("class_id")
     .notNull()
     .references(() => classes.id, { onDelete: "cascade" }),
-  monitorId: integer("monitor_id")
+  monitorId: uuid("monitor_id")
     .notNull()
     .references(() => users.id),
 });
-
 export const students = pgTable("students", {
-  id: serial("id").primaryKey(),
-  fullName: text("full_name").notNull(),
-  dateOfBirth: text("date_of_birth"), // Format YYYY-MM-DD
+  id: uuid("id").primaryKey().defaultRandom(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  dateOfBirth: text("date_of_birth"),
   phone: text("phone"),
   parentPhone: text("parent_phone"),
   note: text("note"),
-  classId: integer("class_id")
+  nationality: text("nationality"),
+  startDate: text("start_date"),
+  level: text("level"),
+  healthStatus: text("health_status"),
+  address: text("address"),
+  occupation: text("occupation"),
+  height: text("height"),
+  weight: text("weight"),
+  trainingStatus: text("training_status"),
+  classId: uuid("class_id")
     .notNull()
     .references(() => classes.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const transactions = pgTable("transactions", {
-  id: serial("id").primaryKey(),
-  classId: integer("class_id")
+  id: uuid("id").primaryKey().defaultRandom(),
+  classId: uuid("class_id")
     .notNull()
     .references(() => classes.id, { onDelete: "cascade" }),
-  type: text("type").notNull(), // INCOME | EXPENSE
+  type: text("type").notNull(),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   category: text("category").notNull(),
   description: text("description"),
   person: text("person"),
   note: text("note"),
-  date: text("date").notNull(), // Format YYYY-MM-DD
-  createdBy: integer("created_by")
+  date: text("date").notNull(),
+  createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -73,17 +73,17 @@ export const transactions = pgTable("transactions", {
 });
 
 export const attendances = pgTable("attendances", {
-  id: serial("id").primaryKey(),
-  classId: integer("class_id")
+  id: uuid("id").primaryKey().defaultRandom(),
+  classId: uuid("class_id")
     .notNull()
     .references(() => classes.id, { onDelete: "cascade" }),
-  studentId: integer("student_id")
+  studentId: uuid("student_id")
     .notNull()
     .references(() => students.id, { onDelete: "cascade" }),
-  date: text("date").notNull(), // Format YYYY-MM-DD
-  status: text("status").notNull(), // PRESENT | ABSENT | LATE
+  date: text("date").notNull(),
+  status: text("status").notNull(),
   note: text("note"),
-  createdBy: integer("created_by")
+  createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),

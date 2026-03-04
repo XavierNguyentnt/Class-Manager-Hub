@@ -8,7 +8,10 @@
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:migrate:uuid": "tsx script/migrate-int-to-uuid.ts",
+    "db:migrate:students:extra": "tsx script/migrate-students-extra-fields.ts",
+    "db:migrate:students:fullname": "tsx script/migrate-students-fullname-compat.ts"
   },
   "dependencies": {
     "dotenv": "^16.4.5",

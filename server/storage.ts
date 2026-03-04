@@ -8,30 +8,30 @@ import {
 
 export interface IStorage {
   // User
-  getUser(id: number): Promise<User | undefined>;
+  getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 
   // Classes
-  getClasses(userId: number): Promise<Class[]>;
-  getClass(id: number): Promise<Class | undefined>;
+  getClasses(userId: string): Promise<Class[]>;
+  getClass(id: string): Promise<Class | undefined>;
   createClass(classData: Omit<Class, "id" | "createdAt">): Promise<Class>;
 
   // Students
-  getStudentsByClass(classId: number): Promise<Student[]>;
+  getStudentsByClass(classId: string): Promise<Student[]>;
   createStudent(student: Omit<Student, "id" | "createdAt">): Promise<Student>;
 
   // Transactions
-  getTransactionsByClass(classId: number): Promise<Transaction[]>;
+  getTransactionsByClass(classId: string): Promise<Transaction[]>;
   createTransaction(transaction: Omit<Transaction, "id" | "createdAt" | "updatedAt">): Promise<Transaction>;
 
   // Attendance
-  getAttendancesByClass(classId: number, date?: string): Promise<Attendance[]>;
+  getAttendancesByClass(classId: string, date?: string): Promise<Attendance[]>;
   createAttendance(attendances: Omit<Attendance, "id" | "createdAt">[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
   }
@@ -46,11 +46,11 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async getClasses(userId: number): Promise<Class[]> {
+  async getClasses(userId: string): Promise<Class[]> {
     return await db.select().from(classes).where(eq(classes.teacherId, userId));
   }
 
-  async getClass(id: number): Promise<Class | undefined> {
+  async getClass(id: string): Promise<Class | undefined> {
     const [cls] = await db.select().from(classes).where(eq(classes.id, id));
     return cls;
   }
@@ -60,7 +60,7 @@ export class DatabaseStorage implements IStorage {
     return cls;
   }
 
-  async getStudentsByClass(classId: number): Promise<Student[]> {
+  async getStudentsByClass(classId: string): Promise<Student[]> {
     return await db.select().from(students).where(eq(students.classId, classId));
   }
 
@@ -69,7 +69,7 @@ export class DatabaseStorage implements IStorage {
     return newStudent;
   }
 
-  async getTransactionsByClass(classId: number): Promise<Transaction[]> {
+  async getTransactionsByClass(classId: string): Promise<Transaction[]> {
     return await db.select().from(transactions).where(eq(transactions.classId, classId));
   }
 
@@ -81,7 +81,7 @@ export class DatabaseStorage implements IStorage {
     return newTransaction;
   }
 
-  async getAttendancesByClass(classId: number, date?: string): Promise<Attendance[]> {
+  async getAttendancesByClass(classId: string, date?: string): Promise<Attendance[]> {
     if (date) {
       return await db.select().from(attendances).where(
         and(eq(attendances.classId, classId), eq(attendances.date, date))

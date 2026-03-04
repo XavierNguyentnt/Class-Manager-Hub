@@ -110,7 +110,7 @@ export const api = {
       input: z.object({
         date: z.string(),
         records: z.array(z.object({
-          studentId: z.number(),
+          studentId: z.string(),
           status: z.enum(['PRESENT', 'ABSENT', 'LATE']),
           note: z.string().optional()
         }))

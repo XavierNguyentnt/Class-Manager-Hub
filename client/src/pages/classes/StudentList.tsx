@@ -5,8 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Plus, Loader2, UserPlus, Phone, Calendar, Users } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,13 +35,18 @@ const createStudentSchema = api.students.create.input;
 export default function StudentList() {
   const [, params] = useRoute("/classes/:id/students");
   const classId = params?.id || "";
-  
+
   const { data: students, isLoading } = useStudents(classId);
   const createStudent = useCreateStudent(classId);
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<z.infer<typeof createStudentSchema>>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<z.infer<typeof createStudentSchema>>({
     resolver: zodResolver(createStudentSchema),
   });
 
@@ -37,7 +57,11 @@ export default function StudentList() {
       reset();
       toast({ title: "Student added successfully" });
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
     }
   };
 
@@ -45,10 +69,14 @@ export default function StudentList() {
     <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">Students Roster</h1>
-          <p className="text-muted-foreground mt-1">Manage enrollments and contact information.</p>
+          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">
+            Students Roster
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage enrollments and contact information.
+          </p>
         </div>
-        
+
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="shadow-sm gap-2">
@@ -56,38 +84,89 @@ export default function StudentList() {
               Add Student
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="max-w-[95vw] md:max-w-3xl lg:max-w-5xl xl:max-w-[1200px]">
             <DialogHeader>
               <DialogTitle>Add new student</DialogTitle>
-              <DialogDescription>Enroll a new student to this class.</DialogDescription>
+              <DialogDescription>
+                Enroll a new student to this class.
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Full Name</Label>
-                <Input id="fullName" placeholder="Jane Doe" {...register("fullName")} />
-                {errors.fullName && <p className="text-sm text-destructive">{errors.fullName.message}</p>}
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4">
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input id="lastName" placeholder="Nguyen" {...register("lastName")} />
+                  {"lastName" in errors && errors.lastName && (
+                    <p className="text-sm text-destructive">{errors.lastName.message as any}</p>
+                  )}
+                </div>
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <Input id="firstName" placeholder="Van A" {...register("firstName")} />
+                  {"firstName" in errors && errors.firstName && (
+                    <p className="text-sm text-destructive">{errors.firstName.message as any}</p>
+                  )}
+                </div>
+                <div className="space-y-2 xl:col-span-2">
                   <Label htmlFor="dateOfBirth">Date of Birth</Label>
                   <Input id="dateOfBirth" type="date" {...register("dateOfBirth")} />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 xl:col-span-2">
                   <Label htmlFor="phone">Student Phone</Label>
-                  <Input id="phone" placeholder="+1..." {...register("phone")} />
+                  <Input id="phone" placeholder="+84..." {...register("phone")} />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="parentPhone">Parent/Guardian Phone</Label>
-                <Input id="parentPhone" placeholder="+1..." {...register("parentPhone")} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="note">Notes</Label>
-                <Input id="note" placeholder="Allergies, accommodations, etc." {...register("note")} />
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="nationality">Nationality</Label>
+                  <Input id="nationality" placeholder="Vietnamese" {...register("nationality")} />
+                </div>
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="startDate">Start Date</Label>
+                  <Input id="startDate" placeholder="YYYY or YYYY-MM-DD" {...register("startDate")} />
+                </div>
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="level">Level</Label>
+                  <Input id="level" placeholder="Sơ cấp 2" {...register("level")} />
+                </div>
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="healthStatus">Health Status</Label>
+                  <Input id="healthStatus" placeholder="Good" {...register("healthStatus")} />
+                </div>
+                <div className="space-y-2 xl:col-span-8">
+                  <Label htmlFor="address">Address</Label>
+                  <Input id="address" placeholder="Đào Tấn, Ba Đình, Hà Nội" {...register("address")} />
+                </div>
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="occupation">Occupation</Label>
+                  <Input id="occupation" placeholder="Đào tạo" {...register("occupation")} />
+                </div>
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="height">Height</Label>
+                  <Input id="height" placeholder="1m67–1m7" {...register("height")} />
+                </div>
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="weight">Weight</Label>
+                  <Input id="weight" placeholder="56–58kg" {...register("weight")} />
+                </div>
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="trainingStatus">Training Status</Label>
+                  <Input id="trainingStatus" placeholder="..." {...register("trainingStatus")} />
+                </div>
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="parentPhone">Parent/Guardian Phone</Label>
+                  <Input id="parentPhone" placeholder="+84..." {...register("parentPhone")} />
+                </div>
+                <div className="space-y-2 xl:col-span-8">
+                  <Label htmlFor="note">Notes</Label>
+                  <Input id="note" placeholder="Allergies, accommodations, etc." {...register("note")} />
+                </div>
               </div>
               <DialogFooter className="pt-4">
                 <Button type="submit" disabled={createStudent.isPending}>
-                  {createStudent.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Save Student"}
+                  {createStudent.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    "Save Student"
+                  )}
                 </Button>
               </DialogFooter>
             </form>
@@ -105,7 +184,9 @@ export default function StudentList() {
             <div className="text-center py-16 px-4">
               <Users className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
               <h3 className="text-lg font-medium">No students enrolled</h3>
-              <p className="text-muted-foreground mt-1">Add students to build your roster.</p>
+              <p className="text-muted-foreground mt-1">
+                Add students to build your roster.
+              </p>
             </div>
           ) : (
             <Table>
@@ -120,13 +201,17 @@ export default function StudentList() {
               </TableHeader>
               <TableBody>
                 {students?.map((student) => (
-                  <TableRow key={student.id} className="hover:bg-muted/30 transition-colors">
+                  <TableRow
+                    key={student.id}
+                    className="hover:bg-muted/30 transition-colors">
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                          {student.fullName.charAt(0).toUpperCase()}
+                          {(student.lastName || student.firstName)
+                            .charAt(0)
+                            .toUpperCase()}
                         </div>
-                        {student.fullName}
+                        {`${student.lastName} ${student.firstName}`}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -134,22 +219,29 @@ export default function StudentList() {
                         <div className="flex items-center text-sm text-muted-foreground">
                           <Phone className="w-3 h-3 mr-2" /> {student.phone}
                         </div>
-                      ) : <span className="text-muted-foreground/50">-</span>}
+                      ) : (
+                        <span className="text-muted-foreground/50">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {student.parentPhone ? (
                         <div className="flex items-center text-sm text-muted-foreground">
-                          <Phone className="w-3 h-3 mr-2 text-indigo-400" /> {student.parentPhone}
+                          <Phone className="w-3 h-3 mr-2 text-indigo-400" />{" "}
+                          {student.parentPhone}
                         </div>
-                      ) : <span className="text-muted-foreground/50">-</span>}
+                      ) : (
+                        <span className="text-muted-foreground/50">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {student.dateOfBirth ? (
                         <div className="flex items-center text-sm">
                           <Calendar className="w-3 h-3 mr-2 text-muted-foreground" />
-                          {format(new Date(student.dateOfBirth), 'MMM d, yyyy')}
+                          {format(new Date(student.dateOfBirth), "MMM d, yyyy")}
                         </div>
-                      ) : <span className="text-muted-foreground/50">-</span>}
+                      ) : (
+                        <span className="text-muted-foreground/50">-</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
                       {student.note || "-"}
