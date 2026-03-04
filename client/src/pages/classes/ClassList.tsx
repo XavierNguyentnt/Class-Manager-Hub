@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link } from "wouter";
 import { useClasses, useCreateClass } from "@/hooks/use-classes";
+import { useAuth } from "@/hooks/use-auth";
+import { useTeachers } from "@/hooks/use-teachers";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,6 +23,8 @@ export default function ClassList() {
   const createClass = useCreateClass();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const { user } = useAuth();
+  const { data: teachers } = useTeachers(user?.role === "ADMIN");
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<z.infer<typeof createClassSchema>>({
     resolver: zodResolver(createClassSchema),
@@ -82,6 +86,17 @@ export default function ClassList() {
                   className="resize-none"
                 />
               </div>
+              {user?.role === "ADMIN" && (
+                <div className="space-y-2">
+                  <Label htmlFor="teacherId">Assign Teacher</Label>
+                  <select id="teacherId" className="border w-full rounded-md h-9 px-3" {...register("teacherId")}>
+                    <option value="">— Select teacher —</option>
+                    {teachers?.map(t => (
+                      <option key={t.id} value={t.id}>{t.fullName} ({t.email})</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <DialogFooter className="pt-4">
                 <Button type="submit" disabled={createClass.isPending}>
                   {createClass.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Create Class"}

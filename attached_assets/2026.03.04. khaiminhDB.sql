@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict v8Ud5dSAnAmgBVg8QgWEFMlIG9V9Wez8WjaydDMxTfV23dePCFdWeTURAkPsjuc
+\restrict WcsfD0hGgxgO0L5JIbtNIUIkuYAMC42CCjWlWkHoDhln9r8XfaMXTgS8BYdPuAH
 
 -- Dumped from database version 17.8 (6108b59)
--- Dumped by pg_dump version 17.7
+-- Dumped by pg_dump version 18.1
 
--- Started on 2026-03-04 19:51:43
+-- Started on 2026-03-04 23:19:06
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -22,22 +22,37 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 6 (class 2615 OID 2200)
--- Name: public; Type: SCHEMA; Schema: -; Owner: pg_database_owner
+-- TOC entry 3 (class 3079 OID 16813)
+-- Name: citext; Type: EXTENSION; Schema: -; Owner: -
 --
 
-CREATE SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public;
 
-
-ALTER SCHEMA public OWNER TO pg_database_owner;
 
 --
--- TOC entry 3552 (class 0 OID 0)
--- Dependencies: 6
--- Name: SCHEMA public; Type: COMMENT; Schema: -; Owner: pg_database_owner
+-- TOC entry 3570 (class 0 OID 0)
+-- Dependencies: 3
+-- Name: EXTENSION citext; Type: COMMENT; Schema: -; Owner: 
 --
 
-COMMENT ON SCHEMA public IS 'standard public schema';
+COMMENT ON EXTENSION citext IS 'data type for case-insensitive character strings';
+
+
+--
+-- TOC entry 2 (class 3079 OID 16776)
+-- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+
+--
+-- TOC entry 3571 (class 0 OID 0)
+-- Dependencies: 2
+-- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: 
+--
+
+COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
 
 
 --
@@ -103,31 +118,31 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- TOC entry 224 (class 1259 OID 24628)
+-- TOC entry 224 (class 1259 OID 41045)
 -- Name: attendances; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.attendances (
-    date text NOT NULL,
-    status text NOT NULL,
-    note text,
-    created_at timestamp without time zone DEFAULT now(),
-    id uuid NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
     class_id uuid NOT NULL,
     student_id uuid NOT NULL,
-    created_by uuid NOT NULL
+    created_by uuid NOT NULL,
+    date date NOT NULL,
+    status public.attendance_status NOT NULL,
+    note text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
 ALTER TABLE public.attendances OWNER TO neondb_owner;
 
 --
--- TOC entry 221 (class 1259 OID 24600)
+-- TOC entry 221 (class 1259 OID 40987)
 -- Name: class_monitors; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.class_monitors (
-    id uuid NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
     class_id uuid NOT NULL,
     monitor_id uuid NOT NULL
 );
@@ -136,102 +151,103 @@ CREATE TABLE public.class_monitors (
 ALTER TABLE public.class_monitors OWNER TO neondb_owner;
 
 --
--- TOC entry 220 (class 1259 OID 24590)
+-- TOC entry 220 (class 1259 OID 40972)
 -- Name: classes; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.classes (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    teacher_id uuid NOT NULL,
     name text NOT NULL,
     description text,
-    created_at timestamp without time zone DEFAULT now(),
-    id uuid NOT NULL,
-    teacher_id uuid NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
 ALTER TABLE public.classes OWNER TO neondb_owner;
 
 --
--- TOC entry 222 (class 1259 OID 24607)
+-- TOC entry 222 (class 1259 OID 41005)
 -- Name: students; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.students (
-    date_of_birth text,
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    class_id uuid NOT NULL,
+    first_name text,
+    last_name text,
+    date_of_birth date,
     phone text,
     parent_phone text,
-    note text,
-    created_at timestamp without time zone DEFAULT now(),
-    id uuid NOT NULL,
-    class_id uuid NOT NULL,
-    last_name text,
-    first_name text,
     nationality text,
-    start_date text,
+    start_date date,
     level text,
     health_status text,
     address text,
     occupation text,
     height text,
     weight text,
-    training_status text
+    training_status text,
+    note text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
 ALTER TABLE public.students OWNER TO neondb_owner;
 
 --
--- TOC entry 223 (class 1259 OID 24617)
+-- TOC entry 223 (class 1259 OID 41020)
 -- Name: transactions; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.transactions (
-    type text NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    class_id uuid NOT NULL,
+    created_by uuid NOT NULL,
+    type public.transaction_type NOT NULL,
     amount numeric(12,2) NOT NULL,
     category text NOT NULL,
     description text,
     person text,
     note text,
-    date text NOT NULL,
-    created_at timestamp without time zone DEFAULT now(),
-    updated_at timestamp without time zone DEFAULT now(),
-    id uuid NOT NULL,
-    class_id uuid NOT NULL,
-    created_by uuid NOT NULL
+    date date NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT transactions_amount_check CHECK ((amount >= (0)::numeric))
 );
 
 
 ALTER TABLE public.transactions OWNER TO neondb_owner;
 
 --
--- TOC entry 219 (class 1259 OID 24577)
+-- TOC entry 219 (class 1259 OID 40960)
 -- Name: users; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.users (
-    email text NOT NULL,
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    email public.citext NOT NULL,
     password text NOT NULL,
     full_name text NOT NULL,
-    role text DEFAULT 'TEACHER'::text NOT NULL,
-    created_at timestamp without time zone DEFAULT now(),
-    id uuid NOT NULL
+    role public.user_role DEFAULT 'TEACHER'::public.user_role NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
 
 ALTER TABLE public.users OWNER TO neondb_owner;
 
 --
--- TOC entry 3546 (class 0 OID 24628)
+-- TOC entry 3564 (class 0 OID 41045)
 -- Dependencies: 224
 -- Data for Name: attendances; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.attendances (date, status, note, created_at, id, class_id, student_id, created_by) FROM stdin;
+COPY public.attendances (id, class_id, student_id, created_by, date, status, note, created_at) FROM stdin;
 \.
 
 
 --
--- TOC entry 3543 (class 0 OID 24600)
+-- TOC entry 3561 (class 0 OID 40987)
 -- Dependencies: 221
 -- Data for Name: class_monitors; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
@@ -241,193 +257,272 @@ COPY public.class_monitors (id, class_id, monitor_id) FROM stdin;
 
 
 --
--- TOC entry 3542 (class 0 OID 24590)
+-- TOC entry 3560 (class 0 OID 40972)
 -- Dependencies: 220
 -- Data for Name: classes; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.classes (name, description, created_at, id, teacher_id) FROM stdin;
-IELTS Mastery 2026	Intensive IELTS preparation class	2026-03-04 11:04:27.408837	99f6f1e6-e367-446f-8f7e-86ad35bdfacf	7139f7af-cb35-4121-bcee-c36e03ee09a4
-LỚP VĨNH XUÂN CHỦ NHẬT	Vĩnh Xuân Thạch Môn - Phân đường Khai Minh Đường\nĐịa chỉ: Đình Võng Thị, 187 Trích Sài, Hà Nội\nChủ nhật hàng tuần: \n+ Mùa hè: 18h30–22h30;\n+ Mùa đông: 17:30-21:30	2026-03-04 11:50:58.981492	b885cd33-2c27-4b5a-9891-00f34f8217d5	02da632b-0df8-49d1-a3d1-804728938e22
+COPY public.classes (id, teacher_id, name, description, created_at) FROM stdin;
+b885cd33-2c27-4b5a-9891-00f34f8217d5	7139f7af-cb35-4121-bcee-c36e03ee09a4	LỚP VĨNH XUÂN CHỦ NHẬT	Vĩnh Xuân Thạch Môn - Phân đường Khai Minh Đường\nĐịa chỉ: Đình Võng Thị, 187 Trích Sài, Hà Nội\nChủ nhật hàng tuần: \n+ Mùa hè: 18h30–22h30;\n+ Mùa đông: 17:30-21:30	2026-03-04 11:50:58.981492+00
 \.
 
 
 --
--- TOC entry 3544 (class 0 OID 24607)
+-- TOC entry 3562 (class 0 OID 41005)
 -- Dependencies: 222
 -- Data for Name: students; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.students (date_of_birth, phone, parent_phone, note, created_at, id, class_id, last_name, first_name, nationality, start_date, level, health_status, address, occupation, height, weight, training_status) FROM stdin;
+COPY public.students (id, class_id, first_name, last_name, date_of_birth, phone, parent_phone, nationality, start_date, level, health_status, address, occupation, height, weight, training_status, note, created_at) FROM stdin;
+e6e34037-a420-4b69-9693-7154be9d4fce	b885cd33-2c27-4b5a-9891-00f34f8217d5	Hà Tuấn	Linh	1995-05-15	0976433390	\N	Vietnamese	2017-01-01	Sơ cấp 2	Good	Đào Tấn, Ba Đình, Hà Nội	Đào tạo	1m67-1m7	56-58kg	\N	\N	2026-03-04 15:55:23.266883+00
 \.
 
 
 --
--- TOC entry 3545 (class 0 OID 24617)
+-- TOC entry 3563 (class 0 OID 41020)
 -- Dependencies: 223
 -- Data for Name: transactions; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.transactions (type, amount, category, description, person, note, date, created_at, updated_at, id, class_id, created_by) FROM stdin;
-INCOME	5000000.00	Tuition	Tuition fee for March	Nguyen Van A		2026-03-04	2026-03-04 11:04:27.579312	2026-03-04 11:04:27.579312	f689420e-94ad-4302-ba92-8d0a379de067	99f6f1e6-e367-446f-8f7e-86ad35bdfacf	7139f7af-cb35-4121-bcee-c36e03ee09a4
-EXPENSE	500000.00	Materials	Books and printing	Bookstore		2026-03-04	2026-03-04 11:04:27.73139	2026-03-04 11:04:27.73139	563786dc-6245-48eb-9bbf-53acff591c13	99f6f1e6-e367-446f-8f7e-86ad35bdfacf	7139f7af-cb35-4121-bcee-c36e03ee09a4
+COPY public.transactions (id, class_id, created_by, type, amount, category, description, person, note, date, created_at, updated_at) FROM stdin;
 \.
 
 
 --
--- TOC entry 3541 (class 0 OID 24577)
+-- TOC entry 3559 (class 0 OID 40960)
 -- Dependencies: 219
 -- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-COPY public.users (email, password, full_name, role, created_at, id) FROM stdin;
-teacher@example.com	cGFzc3dvcmQxMjM=	Admin Teacher	TEACHER	2026-03-04 11:04:27.350283	7139f7af-cb35-4121-bcee-c36e03ee09a4
-admin@khaiminh.local	S2hhaW1pbmhAMjAyNg==	Administrator	ADMIN	2026-03-04 11:13:04.335115	02da632b-0df8-49d1-a3d1-804728938e22
+COPY public.users (id, email, password, full_name, role, created_at) FROM stdin;
+7139f7af-cb35-4121-bcee-c36e03ee09a4	teacher@example.com	cGFzc3dvcmQxMjM=	Admin Teacher	TEACHER	2026-03-04 11:04:27.350283+00
+02da632b-0df8-49d1-a3d1-804728938e22	admin@khaiminh.local	S2hhaW1pbmhAMjAyNg==	Administrator	ADMIN	2026-03-04 11:13:04.335115+00
 \.
 
 
 --
--- TOC entry 3386 (class 2606 OID 32777)
--- Name: attendances attendances_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- TOC entry 3400 (class 2606 OID 41053)
+-- Name: attendances attendances_pkey1; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.attendances
-    ADD CONSTRAINT attendances_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT attendances_pkey1 PRIMARY KEY (id);
 
 
 --
--- TOC entry 3380 (class 2606 OID 32779)
--- Name: class_monitors class_monitors_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- TOC entry 3388 (class 2606 OID 40992)
+-- Name: class_monitors class_monitors_pkey1; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.class_monitors
-    ADD CONSTRAINT class_monitors_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT class_monitors_pkey1 PRIMARY KEY (id);
 
 
 --
--- TOC entry 3378 (class 2606 OID 32771)
--- Name: classes classes_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- TOC entry 3385 (class 2606 OID 40980)
+-- Name: classes classes_pkey1; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.classes
-    ADD CONSTRAINT classes_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT classes_pkey1 PRIMARY KEY (id);
 
 
 --
--- TOC entry 3382 (class 2606 OID 32773)
--- Name: students students_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- TOC entry 3393 (class 2606 OID 41013)
+-- Name: students students_pkey1; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.students
-    ADD CONSTRAINT students_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT students_pkey1 PRIMARY KEY (id);
 
 
 --
--- TOC entry 3384 (class 2606 OID 32775)
--- Name: transactions transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+-- TOC entry 3398 (class 2606 OID 41030)
+-- Name: transactions transactions_pkey1; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.transactions
-    ADD CONSTRAINT transactions_pkey PRIMARY KEY (id);
+    ADD CONSTRAINT transactions_pkey1 PRIMARY KEY (id);
 
 
 --
--- TOC entry 3374 (class 2606 OID 24588)
--- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
---
-
-ALTER TABLE ONLY public.users
-    ADD CONSTRAINT users_email_key UNIQUE (email);
-
-
---
--- TOC entry 3376 (class 2606 OID 32769)
--- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
---
-
-ALTER TABLE ONLY public.users
-    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
-
-
---
--- TOC entry 3393 (class 2606 OID 32800)
--- Name: attendances attendances_class_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
---
-
-ALTER TABLE ONLY public.attendances
-    ADD CONSTRAINT attendances_class_id_fkey FOREIGN KEY (class_id) REFERENCES public.classes(id) ON DELETE CASCADE;
-
-
---
--- TOC entry 3394 (class 2606 OID 32810)
--- Name: attendances attendances_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
---
-
-ALTER TABLE ONLY public.attendances
-    ADD CONSTRAINT attendances_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
-
-
---
--- TOC entry 3395 (class 2606 OID 32805)
--- Name: attendances attendances_student_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
---
-
-ALTER TABLE ONLY public.attendances
-    ADD CONSTRAINT attendances_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id) ON DELETE CASCADE;
-
-
---
--- TOC entry 3388 (class 2606 OID 32815)
--- Name: class_monitors class_monitors_class_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- TOC entry 3390 (class 2606 OID 40994)
+-- Name: class_monitors uq_class_monitors; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.class_monitors
-    ADD CONSTRAINT class_monitors_class_id_fkey FOREIGN KEY (class_id) REFERENCES public.classes(id) ON DELETE CASCADE;
+    ADD CONSTRAINT uq_class_monitors UNIQUE (class_id, monitor_id);
 
 
 --
--- TOC entry 3389 (class 2606 OID 32820)
--- Name: class_monitors class_monitors_monitor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- TOC entry 3381 (class 2606 OID 40971)
+-- Name: users users_email_key1; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_email_key1 UNIQUE (email);
+
+
+--
+-- TOC entry 3383 (class 2606 OID 40969)
+-- Name: users users_pkey1; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey1 PRIMARY KEY (id);
+
+
+--
+-- TOC entry 3401 (class 1259 OID 41069)
+-- Name: idx_attendances_class_id; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_attendances_class_id ON public.attendances USING btree (class_id);
+
+
+--
+-- TOC entry 3402 (class 1259 OID 41071)
+-- Name: idx_attendances_date; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_attendances_date ON public.attendances USING btree (date);
+
+
+--
+-- TOC entry 3403 (class 1259 OID 41070)
+-- Name: idx_attendances_student_id; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_attendances_student_id ON public.attendances USING btree (student_id);
+
+
+--
+-- TOC entry 3386 (class 1259 OID 40986)
+-- Name: idx_classes_teacher_id; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_classes_teacher_id ON public.classes USING btree (teacher_id);
+
+
+--
+-- TOC entry 3391 (class 1259 OID 41019)
+-- Name: idx_students_class_id; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_students_class_id ON public.students USING btree (class_id);
+
+
+--
+-- TOC entry 3394 (class 1259 OID 41041)
+-- Name: idx_transactions_class_id; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_transactions_class_id ON public.transactions USING btree (class_id);
+
+
+--
+-- TOC entry 3395 (class 1259 OID 41042)
+-- Name: idx_transactions_created_by; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_transactions_created_by ON public.transactions USING btree (created_by);
+
+
+--
+-- TOC entry 3396 (class 1259 OID 41043)
+-- Name: idx_transactions_date; Type: INDEX; Schema: public; Owner: neondb_owner
+--
+
+CREATE INDEX idx_transactions_date ON public.transactions USING btree (date);
+
+
+--
+-- TOC entry 3413 (class 2620 OID 41044)
+-- Name: transactions trg_transactions_set_updated_at; Type: TRIGGER; Schema: public; Owner: neondb_owner
+--
+
+CREATE TRIGGER trg_transactions_set_updated_at BEFORE UPDATE ON public.transactions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+
+--
+-- TOC entry 3410 (class 2606 OID 41054)
+-- Name: attendances attendances_class_id_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.attendances
+    ADD CONSTRAINT attendances_class_id_fkey1 FOREIGN KEY (class_id) REFERENCES public.classes(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3411 (class 2606 OID 41064)
+-- Name: attendances attendances_created_by_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.attendances
+    ADD CONSTRAINT attendances_created_by_fkey1 FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+
+--
+-- TOC entry 3412 (class 2606 OID 41059)
+-- Name: attendances attendances_student_id_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.attendances
+    ADD CONSTRAINT attendances_student_id_fkey1 FOREIGN KEY (student_id) REFERENCES public.students(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3405 (class 2606 OID 40995)
+-- Name: class_monitors class_monitors_class_id_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.class_monitors
-    ADD CONSTRAINT class_monitors_monitor_id_fkey FOREIGN KEY (monitor_id) REFERENCES public.users(id);
+    ADD CONSTRAINT class_monitors_class_id_fkey1 FOREIGN KEY (class_id) REFERENCES public.classes(id) ON DELETE CASCADE;
 
 
 --
--- TOC entry 3387 (class 2606 OID 32780)
--- Name: classes classes_teacher_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- TOC entry 3406 (class 2606 OID 41000)
+-- Name: class_monitors class_monitors_monitor_id_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.class_monitors
+    ADD CONSTRAINT class_monitors_monitor_id_fkey1 FOREIGN KEY (monitor_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+
+--
+-- TOC entry 3404 (class 2606 OID 40981)
+-- Name: classes classes_teacher_id_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.classes
-    ADD CONSTRAINT classes_teacher_id_fkey FOREIGN KEY (teacher_id) REFERENCES public.users(id);
+    ADD CONSTRAINT classes_teacher_id_fkey1 FOREIGN KEY (teacher_id) REFERENCES public.users(id) ON DELETE RESTRICT;
 
 
 --
--- TOC entry 3390 (class 2606 OID 32785)
--- Name: students students_class_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- TOC entry 3407 (class 2606 OID 41014)
+-- Name: students students_class_id_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.students
-    ADD CONSTRAINT students_class_id_fkey FOREIGN KEY (class_id) REFERENCES public.classes(id) ON DELETE CASCADE;
+    ADD CONSTRAINT students_class_id_fkey1 FOREIGN KEY (class_id) REFERENCES public.classes(id) ON DELETE CASCADE;
 
 
 --
--- TOC entry 3391 (class 2606 OID 32790)
--- Name: transactions transactions_class_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
---
-
-ALTER TABLE ONLY public.transactions
-    ADD CONSTRAINT transactions_class_id_fkey FOREIGN KEY (class_id) REFERENCES public.classes(id) ON DELETE CASCADE;
-
-
---
--- TOC entry 3392 (class 2606 OID 32795)
--- Name: transactions transactions_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+-- TOC entry 3408 (class 2606 OID 41031)
+-- Name: transactions transactions_class_id_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.transactions
-    ADD CONSTRAINT transactions_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
+    ADD CONSTRAINT transactions_class_id_fkey1 FOREIGN KEY (class_id) REFERENCES public.classes(id) ON DELETE CASCADE;
+
+
+--
+-- TOC entry 3409 (class 2606 OID 41036)
+-- Name: transactions transactions_created_by_fkey1; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
+--
+
+ALTER TABLE ONLY public.transactions
+    ADD CONSTRAINT transactions_created_by_fkey1 FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE RESTRICT;
 
 
 --
@@ -446,11 +541,11 @@ ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON SEQU
 ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON TABLES TO neon_superuser WITH GRANT OPTION;
 
 
--- Completed on 2026-03-04 19:51:48
+-- Completed on 2026-03-04 23:19:11
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict v8Ud5dSAnAmgBVg8QgWEFMlIG9V9Wez8WjaydDMxTfV23dePCFdWeTURAkPsjuc
+\unrestrict WcsfD0hGgxgO0L5JIbtNIUIkuYAMC42CCjWlWkHoDhln9r8XfaMXTgS8BYdPuAH
 

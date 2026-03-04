@@ -26,6 +26,7 @@ export function useAuth() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        credentials: "include",
       });
       if (!res.ok) {
         if (res.status === 401) throw new Error("Invalid credentials");
@@ -44,6 +45,7 @@ export function useAuth() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        credentials: "include",
       });
       if (!res.ok) {
         if (res.status === 400) {
@@ -61,7 +63,7 @@ export function useAuth() {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await fetch(api.auth.logout.path, { method: "POST" });
+      await fetch(api.auth.logout.path, { method: "POST", credentials: "include" });
     },
     onSuccess: () => {
       queryClient.setQueryData([api.auth.me.path], null);

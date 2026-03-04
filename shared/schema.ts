@@ -1,4 +1,11 @@
-import { pgTable, text, uuid, numeric, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  text,
+  uuid,
+  numeric,
+  timestamp,
+  unique,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -15,9 +22,6 @@ export const classes = pgTable("classes", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   description: text("description"),
-  teacherId: uuid("teacher_id")
-    .notNull()
-    .references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -29,7 +33,25 @@ export const classMonitors = pgTable("class_monitors", {
   monitorId: uuid("monitor_id")
     .notNull()
     .references(() => users.id),
+  monitorRole: text("monitor_role").notNull().default("CLASS_MONITOR"),
 });
+export const classTeachers = pgTable(
+  "class_teachers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    classId: uuid("class_id")
+      .notNull()
+      .references(() => classes.id, { onDelete: "cascade" }),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => users.id),
+    teacherRole: text("teacher_role").notNull().default("ASSISTANT_TEACHER"),
+    createdAt: timestamp("created_at").defaultNow(),
+  },
+  (t) => ({
+    uq: unique("class_teachers_class_teacher_uq").on(t.classId, t.teacherId),
+  }),
+);
 export const students = pgTable("students", {
   id: uuid("id").primaryKey().defaultRandom(),
   firstName: text("first_name").notNull(),
@@ -97,7 +119,6 @@ export const insertUserSchema = createInsertSchema(users).omit({
 export const insertClassSchema = createInsertSchema(classes).omit({
   id: true,
   createdAt: true,
-  teacherId: true,
 });
 export const insertStudentSchema = createInsertSchema(students).omit({
   id: true,
@@ -122,6 +143,7 @@ export const insertAttendanceSchema = createInsertSchema(attendances).omit({
 export type User = typeof users.$inferSelect;
 export type Class = typeof classes.$inferSelect;
 export type ClassMonitor = typeof classMonitors.$inferSelect;
+export type ClassTeacher = typeof classTeachers.$inferSelect;
 export type Student = typeof students.$inferSelect;
 export type Transaction = typeof transactions.$inferSelect;
 export type Attendance = typeof attendances.$inferSelect;
