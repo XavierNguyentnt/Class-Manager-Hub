@@ -10,32 +10,40 @@ import { insertUserSchema, users } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 // Use simple hash function for MVP, in production use bcrypt
-const hashPassword = (password: string) => Buffer.from(password).toString("base64");
+const hashPassword = (password: string) =>
+  Buffer.from(password).toString("base64");
 
 export async function registerRoutes(
   httpServer: Server,
-  app: Express
+  app: Express,
 ): Promise<Server> {
   // Auth setup
-  app.use(session({
-    secret: process.env.SESSION_SECRET || 'dev-secret',
-    resave: false,
-    saveUninitialized: false,
-  }));
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET || "dev-secret",
+      resave: false,
+      saveUninitialized: false,
+    }),
+  );
   app.use(passport.initialize());
   app.use(passport.session());
 
-  passport.use(new LocalStrategy({ usernameField: "email" }, async (email, password, done) => {
-    try {
-      const user = await storage.getUserByEmail(email);
-      if (!user || user.password !== hashPassword(password)) {
-        return done(null, false, { message: "Invalid credentials" });
-      }
-      return done(null, user);
-    } catch (err) {
-      return done(err);
-    }
-  }));
+  passport.use(
+    new LocalStrategy(
+      { usernameField: "email" },
+      async (email, password, done) => {
+        try {
+          const user = await storage.getUserByEmail(email);
+          if (!user || user.password !== hashPassword(password)) {
+            return done(null, false, { message: "Invalid credentials" });
+          }
+          return done(null, user);
+        } catch (err) {
+          return done(err);
+        }
+      },
+    ),
+  );
 
   passport.serializeUser((user: any, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
@@ -60,19 +68,22 @@ export async function registerRoutes(
       if (existing) {
         return res.status(400).json({ message: "Email already taken" });
       }
-      
+
       const user = await storage.createUser({
         ...input,
-        password: hashPassword(input.password)
+        password: hashPassword(input.password),
       });
-      
+
       req.login(user, (err) => {
         if (err) return next(err);
         res.status(201).json(user);
       });
     } catch (err) {
       if (err instanceof z.ZodError) {
-        return res.status(400).json({ message: err.errors[0].message, field: err.errors[0].path.join('.') });
+        return res.status(400).json({
+          message: err.errors[0].message,
+          field: err.errors[0].path.join("."),
+        });
       }
       next(err);
     }
@@ -106,7 +117,11 @@ export async function registerRoutes(
   app.post(api.classes.create.path, requireAuth, async (req: any, res) => {
     try {
       const input = api.classes.create.input.parse(req.body);
-      const cls = await storage.createClass({ ...input, teacherId: req.user.id });
+      const cls = await storage.createClass({
+        ...input,
+        description: input.description ?? null,
+        teacherId: req.user.id,
+      });
       res.status(201).json(cls);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -142,24 +157,27 @@ export async function registerRoutes(
     let totalExpenseMonth = 0;
     let balance = 0;
 
-    transactions.forEach(t => {
+    transactions.forEach((t) => {
       const amount = Number(t.amount);
       const tDate = new Date(t.date);
-      
-      if (t.type === 'INCOME') balance += amount;
+
+      if (t.type === "INCOME") balance += amount;
       else balance -= amount;
 
-      if (tDate.getMonth() === currentMonth && tDate.getFullYear() === currentYear) {
-        if (t.type === 'INCOME') totalIncomeMonth += amount;
+      if (
+        tDate.getMonth() === currentMonth &&
+        tDate.getFullYear() === currentYear
+      ) {
+        if (t.type === "INCOME") totalIncomeMonth += amount;
         else totalExpenseMonth += amount;
       }
     });
 
     let presentCount = 0;
     let totalAttendanceCount = attendances.length;
-    
-    attendances.forEach(a => {
-      if (a.status === 'PRESENT') presentCount++;
+
+    attendances.forEach((a) => {
+      if (a.status === "PRESENT") presentCount++;
     });
 
     res.json({
@@ -167,21 +185,40 @@ export async function registerRoutes(
       totalIncomeMonth,
       totalExpenseMonth,
       balance,
-      averageAttendance: totalAttendanceCount > 0 ? (presentCount / totalAttendanceCount) * 100 : 0
+      averageAttendance:
+        totalAttendanceCount > 0
+          ? (presentCount / totalAttendanceCount) * 100
+          : 0,
     });
   });
 
   // Students
   app.get(api.students.list.path, requireAuth, async (req: any, res) => {
-    const students = await storage.getStudentsByClass(Number(req.params.classId));
+    const classId = Number(req.params.classId);
+    const cls = await storage.getClass(classId);
+    if (!cls || cls.teacherId !== req.user.id) {
+      return res.status(404).json({ message: "Class not found" });
+    }
+    const students = await storage.getStudentsByClass(classId);
     res.json(students);
   });
 
   app.post(api.students.create.path, requireAuth, async (req: any, res) => {
     try {
       const classId = Number(req.params.classId);
+      const cls = await storage.getClass(classId);
+      if (!cls || cls.teacherId !== req.user.id) {
+        return res.status(404).json({ message: "Class not found" });
+      }
       const input = api.students.create.input.parse(req.body);
-      const student = await storage.createStudent({ ...input, classId });
+      const student = await storage.createStudent({
+        ...input,
+        dateOfBirth: input.dateOfBirth ?? null,
+        phone: input.phone ?? null,
+        parentPhone: input.parentPhone ?? null,
+        note: input.note ?? null,
+        classId,
+      });
       res.status(201).json(student);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -194,6 +231,10 @@ export async function registerRoutes(
   // Transactions
   app.get(api.transactions.list.path, requireAuth, async (req: any, res) => {
     const classId = Number(req.params.classId);
+    const cls = await storage.getClass(classId);
+    if (!cls || cls.teacherId !== req.user.id) {
+      return res.status(404).json({ message: "Class not found" });
+    }
     const transactions = await storage.getTransactionsByClass(classId);
     res.json(transactions);
   });
@@ -201,12 +242,19 @@ export async function registerRoutes(
   app.post(api.transactions.create.path, requireAuth, async (req: any, res) => {
     try {
       const classId = Number(req.params.classId);
+      const cls = await storage.getClass(classId);
+      if (!cls || cls.teacherId !== req.user.id) {
+        return res.status(404).json({ message: "Class not found" });
+      }
       const input = api.transactions.create.input.parse(req.body);
       const transaction = await storage.createTransaction({
         ...input,
+        description: input.description ?? null,
+        person: input.person ?? null,
+        note: input.note ?? null,
         classId,
         amount: input.amount.toString(),
-        createdBy: req.user.id
+        createdBy: req.user.id,
       });
       res.status(201).json(transaction);
     } catch (err) {
@@ -220,6 +268,10 @@ export async function registerRoutes(
   // Attendance
   app.get(api.attendances.list.path, requireAuth, async (req: any, res) => {
     const classId = Number(req.params.classId);
+    const cls = await storage.getClass(classId);
+    if (!cls || cls.teacherId !== req.user.id) {
+      return res.status(404).json({ message: "Class not found" });
+    }
     const date = req.query.date as string | undefined;
     const attendances = await storage.getAttendancesByClass(classId, date);
     res.json(attendances);
@@ -228,15 +280,19 @@ export async function registerRoutes(
   app.post(api.attendances.create.path, requireAuth, async (req: any, res) => {
     try {
       const classId = Number(req.params.classId);
+      const cls = await storage.getClass(classId);
+      if (!cls || cls.teacherId !== req.user.id) {
+        return res.status(404).json({ message: "Class not found" });
+      }
       const input = api.attendances.create.input.parse(req.body);
-      
-      const records = input.records.map(r => ({
+
+      const records = input.records.map((r) => ({
         classId,
         studentId: r.studentId,
         date: input.date,
         status: r.status,
         note: r.note || null,
-        createdBy: req.user.id
+        createdBy: req.user.id,
       }));
 
       await storage.createAttendance(records);
@@ -268,7 +324,7 @@ async function seedDatabase() {
     const cls = await storage.createClass({
       name: "IELTS Mastery 2026",
       description: "Intensive IELTS preparation class",
-      teacherId: teacher.id
+      teacherId: teacher.id,
     });
 
     const student1 = await storage.createStudent({
@@ -277,7 +333,7 @@ async function seedDatabase() {
       phone: "0123456789",
       parentPhone: null,
       note: "Good student",
-      classId: cls.id
+      classId: cls.id,
     });
 
     const student2 = await storage.createStudent({
@@ -286,7 +342,7 @@ async function seedDatabase() {
       phone: "0987654321",
       parentPhone: "0999888777",
       note: "",
-      classId: cls.id
+      classId: cls.id,
     });
 
     await storage.createTransaction({
@@ -297,8 +353,8 @@ async function seedDatabase() {
       description: "Tuition fee for March",
       person: "Nguyen Van A",
       note: "",
-      date: new Date().toISOString().split('T')[0],
-      createdBy: teacher.id
+      date: new Date().toISOString().split("T")[0],
+      createdBy: teacher.id,
     });
 
     await storage.createTransaction({
@@ -309,10 +365,9 @@ async function seedDatabase() {
       description: "Books and printing",
       person: "Bookstore",
       note: "",
-      date: new Date().toISOString().split('T')[0],
-      createdBy: teacher.id
+      date: new Date().toISOString().split("T")[0],
+      createdBy: teacher.id,
     });
-
   } catch (err) {
     console.error("Failed to seed database:", err);
   }
