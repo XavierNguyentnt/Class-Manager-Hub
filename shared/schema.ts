@@ -56,6 +56,7 @@ export const students = pgTable("students", {
   id: uuid("id").primaryKey().defaultRandom(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
+  gender: text("gender"),
   dateOfBirth: text("date_of_birth"),
   phone: text("phone"),
   parentPhone: text("parent_phone"),

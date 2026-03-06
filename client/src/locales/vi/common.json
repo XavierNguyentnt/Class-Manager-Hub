@@ -104,6 +104,8 @@
   "stats.currentBalance": "Số dư hiện tại",
   "stats.healthy": "Cân đối tốt",
   "stats.deficit": "Thâm hụt",
+  "stats.totalIncome": "Tổng thu",
+  "stats.totalExpense": "Tổng chi",
   "charts.financialOverview.title": "Tổng quan tài chính",
   "charts.financialOverview.subtitle": "Thu vs Chi trong tháng hiện tại",
   "charts.classActivity.title": "Hoạt động lớp",

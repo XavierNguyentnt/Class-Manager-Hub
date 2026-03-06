@@ -104,6 +104,8 @@
   "stats.currentBalance": "Current Balance",
   "stats.healthy": "Healthy standing",
   "stats.deficit": "Deficit",
+  "stats.totalIncome": "Total Income",
+  "stats.totalExpense": "Total Expense",
   "charts.financialOverview.title": "Financial Overview",
   "charts.financialOverview.subtitle": "Income vs Expenses for the current month",
   "charts.classActivity.title": "Class Activity",

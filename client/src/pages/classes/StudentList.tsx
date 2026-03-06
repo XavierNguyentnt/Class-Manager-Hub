@@ -56,7 +56,11 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
-import { formatDateDisplay, formatFullName } from "@/lib/utils";
+import {
+  formatDateDisplay,
+  formatFullName,
+  parseDateInputToISO,
+} from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
 const createStudentSchema = api.students.create.input;
@@ -88,13 +92,25 @@ export default function StudentList() {
     try {
       const payload = { ...data } as any;
       if (payload.dateOfBirth)
-        payload.dateOfBirth = (await import("@/lib/utils")).parseDateInputToISO(
-          payload.dateOfBirth,
-        );
+        payload.dateOfBirth = parseDateInputToISO(payload.dateOfBirth);
       if (payload.startDate)
-        payload.startDate = (await import("@/lib/utils")).parseDateInputToISO(
-          payload.startDate,
-        );
+        payload.startDate = parseDateInputToISO(payload.startDate);
+      if (
+        payload.height !== undefined &&
+        payload.height !== null &&
+        String(payload.height).trim() !== ""
+      ) {
+        const h = Number(String(payload.height).replace(/[^\d.]/g, ""));
+        payload.height = isNaN(h) ? null : String(h);
+      }
+      if (
+        payload.weight !== undefined &&
+        payload.weight !== null &&
+        String(payload.weight).trim() !== ""
+      ) {
+        const w = Number(String(payload.weight).replace(/[^\d.]/g, ""));
+        payload.weight = isNaN(w) ? null : String(w);
+      }
       if (!data.trainingStatus || !data.trainingStatus.trim())
         data.trainingStatus = "ACTIVE" as any;
       await createStudent.mutateAsync(payload);
@@ -195,6 +211,19 @@ export default function StudentList() {
                       {errors.lastName.message as any}
                     </p>
                   )}
+                </div>
+                <div className="space-y-2 xl:col-span-2">
+                  <Label>Gender</Label>
+                  <Select
+                    onValueChange={(v) => setValue("gender" as any, v as any)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="— Optional —" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="MALE">Male</SelectItem>
+                      <SelectItem value="FEMALE">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2 xl:col-span-2">
                   <Label htmlFor="dateOfBirth">{t("students.dob")}</Label>
@@ -331,20 +360,16 @@ export default function StudentList() {
                   />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="height">{t("students.height")}</Label>
+                  <Label htmlFor="height">{t("students.height")} (cm)</Label>
                   <Input
                     id="height"
-                    placeholder="1m67–1m7"
+                    placeholder="170"
                     {...register("height")}
                   />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="weight">{t("students.weight")}</Label>
-                  <Input
-                    id="weight"
-                    placeholder="56–58kg"
-                    {...register("weight")}
-                  />
+                  <Label htmlFor="weight">{t("students.weight")} (kg)</Label>
+                  <Input id="weight" placeholder="56" {...register("weight")} />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
                   <Label htmlFor="trainingStatus">
@@ -480,6 +505,56 @@ export default function StudentList() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              View
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[600px]">
+                            <DialogHeader>
+                              <DialogTitle>Student Details</DialogTitle>
+                              <DialogDescription>
+                                {formatFullName(
+                                  student.firstName,
+                                  student.lastName,
+                                )}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-2 text-sm">
+                              <div>
+                                Gender: {(student as any).gender || "-"}
+                              </div>
+                              <div>
+                                DOB:{" "}
+                                {student.dateOfBirth
+                                  ? formatDateDisplay(student.dateOfBirth)
+                                  : "-"}
+                              </div>
+                              <div>Phone: {student.phone || "-"}</div>
+                              <div>
+                                Parent Phone: {student.parentPhone || "-"}
+                              </div>
+                              <div>
+                                Nationality: {student.nationality || "-"}
+                              </div>
+                              <div>
+                                Start Date:{" "}
+                                {student.startDate
+                                  ? formatDateDisplay(student.startDate)
+                                  : "-"}
+                              </div>
+                              <div>Level: {student.level || "-"}</div>
+                              <div>Health: {student.healthStatus || "-"}</div>
+                              <div>Address: {student.address || "-"}</div>
+                              <div>Occupation: {student.occupation || "-"}</div>
+                              <div>Height (cm): {student.height || "-"}</div>
+                              <div>Weight (kg): {student.weight || "-"}</div>
+                              <div>Status: {student.trainingStatus || "-"}</div>
+                              <div>Note: {student.note || "-"}</div>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                         <Dialog
                           open={editOpen === student.id}
                           onOpenChange={(v) =>
@@ -546,6 +621,7 @@ function EditStudentForm({
     defaultValues: {
       firstName: initial.firstName,
       lastName: initial.lastName,
+      gender: initial.gender || "",
       dateOfBirth: initial.dateOfBirth || "",
       phone: initial.phone || "",
       parentPhone: initial.parentPhone || "",
@@ -567,14 +643,26 @@ function EditStudentForm({
         Object.keys(data).forEach((k) => {
           if (data[k] === "") data[k] = null;
         });
-        const patch = { ...data };
-        if (patch.dateOfBirth) {
-          const { parseDateInputToISO } = require("@/lib/utils");
+        const patch: any = { ...data };
+        if (patch.dateOfBirth)
           patch.dateOfBirth = parseDateInputToISO(patch.dateOfBirth);
-        }
-        if (patch.startDate) {
-          const { parseDateInputToISO } = require("@/lib/utils");
+        if (patch.startDate)
           patch.startDate = parseDateInputToISO(patch.startDate);
+        if (
+          patch.height !== undefined &&
+          patch.height !== null &&
+          String(patch.height).trim() !== ""
+        ) {
+          const h = Number(String(patch.height).replace(/[^\d.]/g, ""));
+          patch.height = isNaN(h) ? null : String(h);
+        }
+        if (
+          patch.weight !== undefined &&
+          patch.weight !== null &&
+          String(patch.weight).trim() !== ""
+        ) {
+          const w = Number(String(patch.weight).replace(/[^\d.]/g, ""));
+          patch.weight = isNaN(w) ? null : String(w);
         }
         onSave(patch);
       })}
@@ -587,6 +675,20 @@ function EditStudentForm({
         <div>
           <Label>Tên</Label>
           <Input {...register("firstName")} />
+        </div>
+        <div>
+          <Label>Gender</Label>
+          <Select
+            onValueChange={(v) => setValue("gender", v)}
+            defaultValue={initial.gender || ""}>
+            <SelectTrigger>
+              <SelectValue placeholder="— Optional —" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="MALE">Male</SelectItem>
+              <SelectItem value="FEMALE">Female</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div>
           <Label>Ngày sinh</Label>
@@ -683,11 +785,11 @@ function EditStudentForm({
           <Input {...register("occupation")} />
         </div>
         <div>
-          <Label>Chiều cao</Label>
+          <Label>Chiều cao (cm)</Label>
           <Input {...register("height")} />
         </div>
         <div>
-          <Label>Cân nặng</Label>
+          <Label>Cân nặng (kg)</Label>
           <Input {...register("weight")} />
         </div>
         <div>

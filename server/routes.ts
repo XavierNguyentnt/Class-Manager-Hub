@@ -640,6 +640,7 @@ export async function registerRoutes(
       };
       const student = await storage.createStudent({
         ...input,
+        gender: input.gender ?? null,
         dateOfBirth: normalize(input.dateOfBirth),
         phone: input.phone || null,
         parentPhone: input.parentPhone || null,
@@ -690,10 +691,12 @@ export async function registerRoutes(
         throw new Error("Invalid date format. Use YYYY or YYYY-MM-DD");
       };
       const patch: any = { ...input };
-      if ("dateOfBirth" in patch) patch.dateOfBirth = normalize(patch.dateOfBirth);
+      if ("dateOfBirth" in patch)
+        patch.dateOfBirth = normalize(patch.dateOfBirth);
       if ("startDate" in patch) patch.startDate = normalize(patch.startDate);
       const updated = await storage.updateStudent(classId, id, patch);
-      if (!updated) return res.status(404).json({ message: "Student not found" });
+      if (!updated)
+        return res.status(404).json({ message: "Student not found" });
       res.json(updated);
     } catch (err) {
       if (err instanceof Error && /Invalid date format/.test(err.message)) {
@@ -896,6 +899,7 @@ async function seedDatabase() {
     const student1 = await storage.createStudent({
       firstName: "Van A",
       lastName: "Nguyen",
+      gender: null,
       dateOfBirth: "2000-01-01",
       phone: "0123456789",
       parentPhone: null,
@@ -915,6 +919,7 @@ async function seedDatabase() {
     const student2 = await storage.createStudent({
       firstName: "Thi B",
       lastName: "Tran",
+      gender: null,
       dateOfBirth: "2001-05-15",
       phone: "0987654321",
       parentPhone: "0999888777",

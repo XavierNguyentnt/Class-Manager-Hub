@@ -92,12 +92,31 @@ export default function TransactionList() {
   const [editId, setEditId] = useState<string | null>(null);
   const { t } = useTranslation("common");
   const [categoryFilter, setCategoryFilter] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<"" | "INCOME" | "EXPENSE">("");
+  const [dateFilter, setDateFilter] = useState<{
+    year?: string;
+    month?: string;
+    from?: string;
+    to?: string;
+  }>({});
   useEffect(() => {
     const handler = (e: Event) =>
       setCategoryFilter((e as CustomEvent<string>).detail || "");
     window.addEventListener("tx-category-filter", handler as any);
     return () =>
       window.removeEventListener("tx-category-filter", handler as any);
+  }, []);
+  useEffect(() => {
+    const handler = (e: Event) =>
+      setTypeFilter(((e as CustomEvent<string>).detail as any) || "");
+    window.addEventListener("tx-type-filter", handler as any);
+    return () => window.removeEventListener("tx-type-filter", handler as any);
+  }, []);
+  useEffect(() => {
+    const handler = (e: Event) =>
+      setDateFilter(((e as CustomEvent<any>).detail as any) || {});
+    window.addEventListener("tx-date-filter", handler as any);
+    return () => window.removeEventListener("tx-date-filter", handler as any);
   }, []);
 
   const {
@@ -137,6 +156,35 @@ export default function TransactionList() {
   if (!watch("category")) {
     setValue("category", categories[0]);
   }
+
+  const ymNow = format(new Date(), "yyyy-MM");
+  const monthIncome = (transactions || []).reduce((sum, tx) => {
+    try {
+      const d = new Date(tx.date as any);
+      const ym = isNaN(d.getTime()) ? "" : format(d, "yyyy-MM");
+      return ym === ymNow && tx.type === "INCOME"
+        ? sum + Number(tx.amount)
+        : sum;
+    } catch {
+      return sum;
+    }
+  }, 0);
+  const monthExpense = (transactions || []).reduce((sum, tx) => {
+    try {
+      const d = new Date(tx.date as any);
+      const ym = isNaN(d.getTime()) ? "" : format(d, "yyyy-MM");
+      return ym === ymNow && tx.type === "EXPENSE"
+        ? sum + Number(tx.amount)
+        : sum;
+    } catch {
+      return sum;
+    }
+  }, 0);
+  const currentBalance = (transactions || []).reduce((sum, tx) => {
+    return tx.type === "INCOME"
+      ? sum + Number(tx.amount)
+      : sum - Number(tx.amount);
+  }, 0);
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
@@ -380,7 +428,44 @@ export default function TransactionList() {
           </DialogContent>
         </Dialog>
       </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <Badge
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent("tx-type-filter", {
+                detail: typeFilter === "INCOME" ? "" : "INCOME",
+              }),
+            )
+          }
+          className={`cursor-pointer border-emerald-300 ${
+            typeFilter === "INCOME"
+              ? "bg-emerald-500/20 text-emerald-800"
+              : "bg-emerald-500/10 text-emerald-700"
+          }`}>
+          {t("stats.totalIncome")}: {formatVNDAccounting(monthIncome)}
+        </Badge>
+        <Badge
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent("tx-type-filter", {
+                detail: typeFilter === "EXPENSE" ? "" : "EXPENSE",
+              }),
+            )
+          }
+          className={`cursor-pointer border-rose-300 ${
+            typeFilter === "EXPENSE"
+              ? "bg-rose-500/20 text-rose-800"
+              : "bg-rose-500/10 text-rose-700"
+          }`}>
+          {t("stats.totalExpense")}: {formatVNDAccounting(monthExpense)}
+        </Badge>
+        <Badge className="bg-muted text-foreground border-neutral-300">
+          {t("stats.currentBalance")}: {formatVNDAccounting(currentBalance)}
+        </Badge>
+      </div>
+
       <TransactionCategoryFilter />
+      <TransactionDateFilters />
 
       <Card className="border-border/50 shadow-sm overflow-hidden">
         <CardContent className="p-0">
@@ -414,97 +499,128 @@ export default function TransactionList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(categoryFilter
-                  ? transactions?.filter(
-                      (tx) =>
-                        typeof tx.category === "string" &&
+                {(transactions || [])
+                  .filter((tx) => (typeFilter ? tx.type === typeFilter : true))
+                  .filter((tx) =>
+                    categoryFilter
+                      ? typeof tx.category === "string" &&
                         tx.category.startsWith("transactions.categories.") &&
-                        tx.category === categoryFilter,
-                    )
-                  : transactions
-                )?.map((tx) => (
-                  <TableRow
-                    key={tx.id}
-                    className="hover:bg-muted/30 transition-colors">
-                    <TableCell className="whitespace-nowrap">
-                      {formatDateDisplay(tx.date)}
-                    </TableCell>
-                    <TableCell>
-                      {tx.type === "INCOME" ? (
-                        <Badge
-                          variant="outline"
-                          className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
-                          <ArrowUpCircle className="w-3 h-3 mr-1" />{" "}
-                          {t("transactions.type.income")}
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="outline"
-                          className="bg-rose-500/10 text-rose-600 border-rose-200">
-                          <ArrowDownCircle className="w-3 h-3 mr-1" />{" "}
-                          {t("transactions.type.expense")}
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium text-sm">
-                      {typeof tx.category === "string" &&
-                      tx.category.startsWith("transactions.categories.")
-                        ? t(tx.category)
-                        : tx.category}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                      {tx.description || "-"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {tx.person || "-"}
-                    </TableCell>
-                    <TableCell
-                      className={`text-right font-display font-semibold ${tx.type === "INCOME" ? "text-emerald-600" : "text-rose-600"}`}>
-                      <div>
-                        {tx.type === "INCOME" ? "+" : "-"}
-                        {formatCurrency(tx.amount)}
-                      </div>
-                      <div className="text-xs text-muted-foreground italic mt-0.5">
-                        {vndToWords(tx.amount)}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      <Dialog
-                        open={editId === tx.id}
-                        onOpenChange={(v) => setEditId(v ? tx.id : null)}>
-                        <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                            Edit
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[500px]">
-                          <DialogHeader>
-                            <DialogTitle>
-                              {t("transactions.newTitle")}
-                            </DialogTitle>
-                            <DialogDescription>
-                              {t("transactions.newSubtitle")}
-                            </DialogDescription>
-                          </DialogHeader>
-                          <EditTransactionForm
-                            initial={tx}
-                            onCancel={() => setEditId(null)}
-                            onSave={(data) => onUpdate(tx.id, data)}
-                          />
-                        </DialogContent>
-                      </Dialog>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="ml-2"
-                        onClick={() => {
-                          if (confirm("Xóa giao dịch này?")) onDelete(tx.id);
-                        }}>
-                        Delete
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        tx.category === categoryFilter
+                      : true,
+                  )
+                  .filter((tx) => {
+                    const d = new Date(tx.date as any);
+                    if (isNaN(d.getTime())) return false;
+                    const y = d.getFullYear();
+                    const m = d.getMonth() + 1;
+                    if (dateFilter.from || dateFilter.to) {
+                      const fromISO = parseDateInputToISO(
+                        dateFilter.from || "",
+                      );
+                      const toISO = parseDateInputToISO(dateFilter.to || "");
+                      const from = fromISO ? new Date(fromISO) : undefined;
+                      const to = toISO ? new Date(toISO) : undefined;
+                      if (from && d < from) return false;
+                      if (to) {
+                        const tend = new Date(to);
+                        tend.setHours(23, 59, 59, 999);
+                        if (d > tend) return false;
+                      }
+                    } else {
+                      if (dateFilter.year && y !== Number(dateFilter.year))
+                        return false;
+                      if (
+                        dateFilter.month &&
+                        Number(dateFilter.month) >= 1 &&
+                        m !== Number(dateFilter.month)
+                      )
+                        return false;
+                    }
+                    return true;
+                  })
+                  .map((tx) => (
+                    <TableRow
+                      key={tx.id}
+                      className="hover:bg-muted/30 transition-colors">
+                      <TableCell className="whitespace-nowrap">
+                        {formatDateDisplay(tx.date)}
+                      </TableCell>
+                      <TableCell>
+                        {tx.type === "INCOME" ? (
+                          <Badge
+                            variant="outline"
+                            className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
+                            <ArrowUpCircle className="w-3 h-3 mr-1" />{" "}
+                            {t("transactions.type.income")}
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="outline"
+                            className="bg-rose-500/10 text-rose-600 border-rose-200">
+                            <ArrowDownCircle className="w-3 h-3 mr-1" />{" "}
+                            {t("transactions.type.expense")}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="font-medium text-sm">
+                        {typeof tx.category === "string" &&
+                        tx.category.startsWith("transactions.categories.")
+                          ? t(tx.category)
+                          : tx.category}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
+                        {tx.description || "-"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {tx.person || "-"}
+                      </TableCell>
+                      <TableCell
+                        className={`text-right font-display font-semibold ${tx.type === "INCOME" ? "text-emerald-600" : "text-rose-600"}`}>
+                        <div>
+                          {tx.type === "INCOME" ? "+" : "-"}
+                          {formatCurrency(tx.amount)}
+                        </div>
+                        <div className="text-xs text-muted-foreground italic mt-0.5">
+                          {vndToWords(tx.amount)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <Dialog
+                          open={editId === tx.id}
+                          onOpenChange={(v) => setEditId(v ? tx.id : null)}>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              Edit
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[500px]">
+                            <DialogHeader>
+                              <DialogTitle>
+                                {t("transactions.newTitle")}
+                              </DialogTitle>
+                              <DialogDescription>
+                                {t("transactions.newSubtitle")}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <EditTransactionForm
+                              initial={tx}
+                              onCancel={() => setEditId(null)}
+                              onSave={(data) => onUpdate(tx.id, data)}
+                            />
+                          </DialogContent>
+                        </Dialog>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="ml-2"
+                          onClick={() => {
+                            if (confirm("Xóa giao dịch này?")) onDelete(tx.id);
+                          }}>
+                          Delete
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           )}
@@ -516,42 +632,249 @@ export default function TransactionList() {
 
 function TransactionCategoryFilter() {
   const { t } = useTranslation("common");
-  const [selected, setSelected] = useState<string>("ALL");
-  // Publish a custom event so the table below can pick up the filter without lifting too much state
-  const publish = (val: string) => {
-    const key = val === "ALL" ? "" : val;
-    setSelected(val);
-    window.dispatchEvent(
-      new CustomEvent("tx-category-filter", { detail: key }),
-    );
-  };
-  const allKeys = [
+  const [typeSel, setTypeSel] = useState<"ALL" | "INCOME" | "EXPENSE">("ALL");
+  const [catSel, setCatSel] = useState<string>("ALL");
+  const incomeKeys = [
     "transactions.categories.income.tuition",
     "transactions.categories.income.donation",
     "transactions.categories.other",
+  ];
+  const expenseKeys = [
     "transactions.categories.expense.field",
     "transactions.categories.expense.food",
     "transactions.categories.expense.developmentFund",
     "transactions.categories.expense.donation",
     "transactions.categories.expense.reward",
     "transactions.categories.expense.gift",
+    "transactions.categories.other",
   ];
+  const keys =
+    typeSel === "INCOME"
+      ? incomeKeys
+      : typeSel === "EXPENSE"
+        ? expenseKeys
+        : [];
+  const publishType = (val: "ALL" | "INCOME" | "EXPENSE") => {
+    setTypeSel(val);
+    setCatSel("ALL");
+    window.dispatchEvent(
+      new CustomEvent("tx-type-filter", { detail: val === "ALL" ? "" : val }),
+    );
+    window.dispatchEvent(new CustomEvent("tx-category-filter", { detail: "" }));
+  };
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const v = ((e as CustomEvent<string>).detail || "") as
+        | ""
+        | "INCOME"
+        | "EXPENSE";
+      setTypeSel((v || "ALL") as any);
+      setCatSel("ALL");
+    };
+    window.addEventListener("tx-type-filter", handler as any);
+    return () => window.removeEventListener("tx-type-filter", handler as any);
+  }, []);
+  const publishCat = (val: string) => {
+    setCatSel(val);
+    const key = val === "ALL" ? "" : val;
+    window.dispatchEvent(
+      new CustomEvent("tx-category-filter", { detail: key }),
+    );
+  };
   return (
-    <div className="flex items-center gap-2">
-      <Label className="text-sm">{t("transactions.category")}</Label>
-      <Select onValueChange={publish} defaultValue={selected}>
-        <SelectTrigger className="w-[240px]">
-          <SelectValue placeholder={`${t("transactions.category")} — All`} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="ALL">{`All`}</SelectItem>
-          {allKeys.map((key) => (
-            <SelectItem key={key} value={key}>
-              {t(key)}
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <Label className="text-sm">Loại</Label>
+        <Select
+          onValueChange={(v) => publishType(v as any)}
+          defaultValue={typeSel}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="All" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All</SelectItem>
+            <SelectItem value="INCOME">
+              {t("transactions.type.income")}
             </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+            <SelectItem value="EXPENSE">
+              {t("transactions.type.expense")}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex items-center gap-2">
+        <Label className="text-sm">{t("transactions.category")}</Label>
+        <Select
+          onValueChange={publishCat}
+          defaultValue={catSel}
+          disabled={typeSel === "ALL"}>
+          <SelectTrigger className="w-[240px]">
+            <SelectValue placeholder={`${t("transactions.category")} — All`} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All</SelectItem>
+            {keys.map((key) => (
+              <SelectItem key={key} value={key}>
+                {t(key)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}
+
+function TransactionDateFilters() {
+  const years = (() => {
+    const now = new Date().getFullYear();
+    return Array.from({ length: 6 }).map((_, i) => String(now - i));
+  })();
+  const [yearSel, setYearSel] = useState<string>("ALL");
+  const [monthSel, setMonthSel] = useState<string>("ALL");
+  const [fromText, setFromText] = useState<string>("");
+  const [toText, setToText] = useState<string>("");
+  const publish = (payload: {
+    year?: string;
+    month?: string;
+    from?: string;
+    to?: string;
+  }) => {
+    window.dispatchEvent(
+      new CustomEvent("tx-date-filter", { detail: payload }),
+    );
+  };
+  const setYear = (v: string) => {
+    setYearSel(v);
+    const year = v === "ALL" ? undefined : v;
+    publish({ year, month: monthSel === "ALL" ? undefined : monthSel });
+  };
+  const setMonth = (v: string) => {
+    setMonthSel(v);
+    const month = v === "ALL" ? undefined : v;
+    publish({ year: yearSel === "ALL" ? undefined : yearSel, month });
+  };
+  const onFrom = (v: string) => {
+    const txt = normalizeDateTyping(v);
+    setFromText(txt);
+    publish({ from: txt || undefined, to: toText || undefined });
+  };
+  const onTo = (v: string) => {
+    const txt = normalizeDateTyping(v);
+    setToText(txt);
+    publish({ from: fromText || undefined, to: txt || undefined });
+  };
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-2">
+        <Label className="text-sm">Năm</Label>
+        <Select onValueChange={setYear} defaultValue={yearSel}>
+          <SelectTrigger className="w-[120px]">
+            <SelectValue placeholder="ALL" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All</SelectItem>
+            {years.map((y) => (
+              <SelectItem key={y} value={y}>
+                {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex items-center gap-2">
+        <Label className="text-sm">Tháng</Label>
+        <Select onValueChange={setMonth} defaultValue={monthSel}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="ALL" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All</SelectItem>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <SelectItem key={i + 1} value={String(i + 1)}>
+                {String(i + 1).padStart(2, "0")}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="flex items-center gap-2">
+        <Label className="text-sm">Từ ngày</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            className="w-[140px]"
+            type="text"
+            placeholder="dd/MM/yyyy"
+            value={fromText}
+            onChange={(e) => onFrom(e.target.value)}
+          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline">
+                <ChevronsUpDown className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0">
+              <DayCalendar
+                mode="single"
+                onSelect={(d) => {
+                  if (!d) return;
+                  const dd = String(d.getDate()).padStart(2, "0");
+                  const mm = String(d.getMonth() + 1).padStart(2, "0");
+                  const yyyy = d.getFullYear();
+                  const v = `${dd}/${mm}/${yyyy}`;
+                  setFromText(v);
+                  publish({ from: v || undefined, to: toText || undefined });
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Label className="text-sm">Đến ngày</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            className="w-[140px]"
+            type="text"
+            placeholder="dd/MM/yyyy"
+            value={toText}
+            onChange={(e) => onTo(e.target.value)}
+          />
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline">
+                <ChevronsUpDown className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0">
+              <DayCalendar
+                mode="single"
+                onSelect={(d) => {
+                  if (!d) return;
+                  const dd = String(d.getDate()).padStart(2, "0");
+                  const mm = String(d.getMonth() + 1).padStart(2, "0");
+                  const yyyy = d.getFullYear();
+                  const v = `${dd}/${mm}/${yyyy}`;
+                  setToText(v);
+                  publish({ from: fromText || undefined, to: v || undefined });
+                }}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+      <Button
+        variant="outline"
+        onClick={() => {
+          setYearSel("ALL");
+          setMonthSel("ALL");
+          setFromText("");
+          setToText("");
+          publish({});
+        }}>
+        Xóa lọc ngày
+      </Button>
     </div>
   );
 }
@@ -728,6 +1051,7 @@ function normalizeDateTyping(value: string) {
   if (digits.length >= 5)
     return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
   if (digits.length >= 3) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return digits;
 }
 
 function groupThousands(src: string) {
