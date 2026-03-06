@@ -16,6 +16,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
 
 // Need to extend schema on frontend to handle string -> number for the input
 const formSchema = api.transactions.create.input.extend({
@@ -30,6 +31,7 @@ export default function TransactionList() {
   const createTx = useCreateTransaction(classId);
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation("common");
 
   const { register, handleSubmit, control, reset, formState: { errors } } = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -44,7 +46,7 @@ export default function TransactionList() {
       await createTx.mutateAsync(data);
       setOpen(false);
       reset({ type: "INCOME", date: format(new Date(), 'yyyy-MM-dd') });
-      toast({ title: "Transaction recorded" });
+      toast({ title: t("transactions.recorded") });
     } catch (error: any) {
       toast({ variant: "destructive", title: "Error", description: error.message });
     }
@@ -58,73 +60,73 @@ export default function TransactionList() {
     <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">Financial Records</h1>
-          <p className="text-muted-foreground mt-1">Track income from fees and class expenses.</p>
+          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">{t("transactions.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("transactions.subtitle")}</p>
         </div>
         
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="shadow-sm gap-2">
               <Plus className="w-4 h-4" />
-              Add Transaction
+              {t("transactions.add")}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>New Transaction</DialogTitle>
-              <DialogDescription>Record a payment or expense.</DialogDescription>
+              <DialogTitle>{t("transactions.newTitle")}</DialogTitle>
+              <DialogDescription>{t("transactions.newSubtitle")}</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Type</Label>
+                  <Label>{t("transactions.type")}</Label>
                   <Controller
                     control={control}
                     name="type"
                     render={({ field }) => (
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select type" />
+                          <SelectValue placeholder={t("transactions.type.placeholder")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="INCOME">Income (Fee)</SelectItem>
-                          <SelectItem value="EXPENSE">Expense</SelectItem>
+                          <SelectItem value="INCOME">{t("transactions.type.income")}</SelectItem>
+                          <SelectItem value="EXPENSE">{t("transactions.type.expense")}</SelectItem>
                         </SelectContent>
                       </Select>
                     )}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
+                  <Label htmlFor="date">{t("transactions.date")}</Label>
                   <Input id="date" type="date" {...register("date")} />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="amount">Amount ($)</Label>
+                <Label htmlFor="amount">{t("transactions.amount")}</Label>
                 <Input id="amount" type="number" step="0.01" min="0" placeholder="0.00" {...register("amount")} />
                 {errors.amount && <p className="text-sm text-destructive">{errors.amount.message}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
+                <Label htmlFor="category">{t("transactions.category")}</Label>
                 <Input id="category" placeholder="e.g. Tuition, Supplies" {...register("category")} />
                 {errors.category && <p className="text-sm text-destructive">{errors.category.message}</p>}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="person">Person (Optional)</Label>
+                <Label htmlFor="person">{t("transactions.person")}</Label>
                 <Input id="person" placeholder="Student name or vendor" {...register("person")} />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
+                <Label htmlFor="description">{t("transactions.description")}</Label>
                 <Input id="description" placeholder="Brief detail" {...register("description")} />
               </div>
 
               <DialogFooter className="pt-4">
                 <Button type="submit" disabled={createTx.isPending}>
-                  {createTx.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Save Record"}
+                  {createTx.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : t("transactions.save")}
                 </Button>
               </DialogFooter>
             </form>
@@ -141,19 +143,19 @@ export default function TransactionList() {
           ) : transactions?.length === 0 ? (
             <div className="text-center py-16 px-4">
               <Banknote className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-              <h3 className="text-lg font-medium">No transactions yet</h3>
-              <p className="text-muted-foreground mt-1">Record your first income or expense.</p>
+              <h3 className="text-lg font-medium">{t("transactions.empty.title")}</h3>
+              <p className="text-muted-foreground mt-1">{t("transactions.empty.subtitle")}</p>
             </div>
           ) : (
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Person</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>{t("transactions.table.date")}</TableHead>
+                  <TableHead>{t("transactions.table.type")}</TableHead>
+                  <TableHead>{t("transactions.table.category")}</TableHead>
+                  <TableHead>{t("transactions.table.description")}</TableHead>
+                  <TableHead>{t("transactions.table.person")}</TableHead>
+                  <TableHead className="text-right">{t("transactions.table.amount")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -165,11 +167,11 @@ export default function TransactionList() {
                     <TableCell>
                       {tx.type === 'INCOME' ? (
                         <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-200">
-                          <ArrowUpCircle className="w-3 h-3 mr-1" /> Income
+                          <ArrowUpCircle className="w-3 h-3 mr-1" /> {t("transactions.type.income")}
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="bg-rose-500/10 text-rose-600 border-rose-200">
-                          <ArrowDownCircle className="w-3 h-3 mr-1" /> Expense
+                          <ArrowDownCircle className="w-3 h-3 mr-1" /> {t("transactions.type.expense")}
                         </Badge>
                       )}
                     </TableCell>

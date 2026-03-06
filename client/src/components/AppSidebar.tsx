@@ -11,12 +11,14 @@ import {
   ArrowLeft, LogOut, BookOpen, UserCircle
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useTranslation } from "react-i18next";
 
 import logoImg from "@assets/image_1772599459362.png";
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user, logout } = useAuth();
+  const { t } = useTranslation("common");
   
   const [isClassRoute, params] = useRoute("/classes/:id/*?");
   const classId = params?.id;
@@ -32,7 +34,7 @@ export function AppSidebar() {
         <div className="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center shadow-md">
           <img src={logoImg} alt="Logo" className="w-full h-full object-cover" />
         </div>
-        <span className="font-display font-bold text-xl tracking-tight text-foreground">Vĩnh Xuân</span>
+        <span className="font-display font-bold text-xl tracking-tight text-foreground">{t("app.name")}</span>
       </SidebarHeader>
       
       <SidebarContent>
@@ -42,10 +44,10 @@ export function AppSidebar() {
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Back to Classes">
+                    <SidebarMenuButton asChild tooltip={t("nav.backToClasses")}>
                       <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
                         <ArrowLeft className="w-4 h-4 mr-2" />
-                        <span>All Classes</span>
+                        <span>{t("nav.myClasses")}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -57,7 +59,7 @@ export function AppSidebar() {
 
             <SidebarGroup>
               <SidebarGroupLabel className="font-medium text-xs uppercase tracking-wider text-muted-foreground/70">
-                {classData ? classData.name : "Loading..."}
+                {classData ? classData.name : t("status.loading")}
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
@@ -65,7 +67,7 @@ export function AppSidebar() {
                     <SidebarMenuButton asChild isActive={location === `/classes/${classId}/dashboard`}>
                       <Link href={`/classes/${classId}/dashboard`}>
                         <LayoutDashboard />
-                        <span>Dashboard</span>
+                        <span>{t("nav.dashboard")}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -73,7 +75,7 @@ export function AppSidebar() {
                     <SidebarMenuButton asChild isActive={location === `/classes/${classId}/students`}>
                       <Link href={`/classes/${classId}/students`}>
                         <Users />
-                        <span>Students</span>
+                        <span>{t("nav.students")}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -81,7 +83,7 @@ export function AppSidebar() {
                     <SidebarMenuButton asChild isActive={location === `/classes/${classId}/transactions`}>
                       <Link href={`/classes/${classId}/transactions`}>
                         <CreditCard />
-                        <span>Financials</span>
+                        <span>{t("nav.financials")}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -89,7 +91,7 @@ export function AppSidebar() {
                     <SidebarMenuButton asChild isActive={location === `/classes/${classId}/attendance`}>
                       <Link href={`/classes/${classId}/attendance`}>
                         <CalendarCheck />
-                        <span>Attendance</span>
+                        <span>{t("nav.attendance")}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -99,14 +101,14 @@ export function AppSidebar() {
           </>
         ) : (
           <SidebarGroup>
-            <SidebarGroupLabel className="font-medium text-xs uppercase tracking-wider text-muted-foreground/70">Overview</SidebarGroupLabel>
+            <SidebarGroupLabel className="font-medium text-xs uppercase tracking-wider text-muted-foreground/70">{t("nav.overview")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === "/"}>
                     <Link href="/">
                       <BookOpen />
-                      <span>My Classes</span>
+                      <span>{t("nav.myClasses")}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -134,7 +136,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton onClick={handleLogout} className="text-destructive hover:bg-destructive/10 hover:text-destructive transition-colors">
               <LogOut />
-              <span>Logout</span>
+              <span>{t("nav.logout")}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

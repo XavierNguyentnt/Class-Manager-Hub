@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { BookOpen, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
 
 import logoImg from "@assets/image_1772599459362.png";
 
@@ -20,6 +21,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { login, isLoggingIn } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation("common");
 
   const { register, handleSubmit, formState: { errors } } = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -32,7 +34,7 @@ export default function Login() {
     } catch (error: any) {
       toast({
         variant: "destructive",
-        title: "Login Failed",
+        title: t("auth.welcome"),
         description: error.message,
       });
     }
@@ -55,15 +57,15 @@ export default function Login() {
 
         <Card className="border-border/50 shadow-xl shadow-black/5 bg-background/80 backdrop-blur-xl">
           <CardHeader className="space-y-2 text-center pb-6">
-            <CardTitle className="text-3xl font-display font-bold tracking-tight">Welcome back</CardTitle>
+            <CardTitle className="text-3xl font-display font-bold tracking-tight">{t("auth.welcome")}</CardTitle>
             <CardDescription className="text-muted-foreground">
-              Enter your credentials to access your classes
+              {t("auth.subtitle")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("auth.email")}</Label>
                 <Input 
                   id="email" 
                   type="email" 
@@ -75,7 +77,7 @@ export default function Login() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">{t("auth.password")}</Label>
                 </div>
                 <Input 
                   id="password" 
@@ -87,14 +89,14 @@ export default function Login() {
                 {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
               </div>
               <Button type="submit" className="w-full shadow-md hover:shadow-lg transition-all" disabled={isLoggingIn}>
-                {isLoggingIn ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : "Sign in"}
+                {isLoggingIn ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : t("auth.signIn")}
               </Button>
             </form>
           </CardContent>
           <CardFooter className="flex justify-center border-t border-border/50 pt-6 text-sm text-muted-foreground">
-            Don't have an account? 
+            {t("auth.noAccount")} 
             <Link href="/register" className="ml-1 text-primary hover:underline font-medium">
-              Create one
+              {t("auth.createOne")}
             </Link>
           </CardFooter>
         </Card>

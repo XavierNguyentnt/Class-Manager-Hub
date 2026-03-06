@@ -19,12 +19,14 @@ import { Loader2, Save, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
 
 type Status = "PRESENT" | "ABSENT" | "LATE";
 
 export default function AttendanceList() {
   const [, params] = useRoute("/classes/:id/attendance");
   const classId = params?.id || "";
+  const { t } = useTranslation("common");
 
   const [selectedDate, setSelectedDate] = useState(
     format(new Date(), "yyyy-MM-dd"),
@@ -75,7 +77,7 @@ export default function AttendanceList() {
         records,
       });
 
-      toast({ title: "Attendance saved successfully" });
+      toast({ title: "OK" });
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -91,21 +93,15 @@ export default function AttendanceList() {
     <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">
-            Attendance
-          </h1>
+          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">{t("attendance.title")}</h1>
           <p className="text-muted-foreground mt-1">
-            Track daily presence for your students.
+            {t("attendance.subtitle")}
           </p>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="space-y-1">
-            <Label
-              htmlFor="date-picker"
-              className="text-xs text-muted-foreground">
-              Select Date
-            </Label>
+            <Label htmlFor="date-picker" className="text-xs text-muted-foreground">{t("attendance.selectDate")}</Label>
             <Input
               id="date-picker"
               type="date"
@@ -125,7 +121,7 @@ export default function AttendanceList() {
             ) : (
               <Save className="w-4 h-4 mr-2" />
             )}
-            Save Attendance
+            {t("attendance.save")}
           </Button>
         </div>
       </div>
@@ -138,17 +134,21 @@ export default function AttendanceList() {
             </div>
           ) : students?.length === 0 ? (
             <div className="text-center py-16 px-4">
-              <h3 className="text-lg font-medium">No students found</h3>
+              <h3 className="text-lg font-medium">
+                {t("attendance.empty.title")}
+              </h3>
               <p className="text-muted-foreground mt-1">
-                Add students to the class before tracking attendance.
+                {t("attendance.empty.description")}
               </p>
             </div>
           ) : (
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableHead className="w-[300px]">Student Name</TableHead>
-                  <TableHead>Status Selection</TableHead>
+                  <TableHead className="w-[300px]">
+                    {t("attendance.table.studentName")}
+                  </TableHead>
+                  <TableHead>{t("attendance.table.statusSelection")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -182,7 +182,7 @@ export default function AttendanceList() {
                           <Label
                             htmlFor={`present-${student.id}`}
                             className="cursor-pointer flex items-center font-medium text-emerald-700">
-                            <CheckCircle2 className="w-4 h-4 mr-1" /> Present
+                            <CheckCircle2 className="w-4 h-4 mr-1" /> {t("attendance.status.present")}
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2 border rounded-md p-2 cursor-pointer hover:bg-muted transition-colors data-[state=checked]:border-rose-500 data-[state=checked]:bg-rose-50">
@@ -194,7 +194,7 @@ export default function AttendanceList() {
                           <Label
                             htmlFor={`absent-${student.id}`}
                             className="cursor-pointer flex items-center font-medium text-rose-700">
-                            <XCircle className="w-4 h-4 mr-1" /> Absent
+                            <XCircle className="w-4 h-4 mr-1" /> {t("attendance.status.absent")}
                           </Label>
                         </div>
                         <div className="flex items-center space-x-2 border rounded-md p-2 cursor-pointer hover:bg-muted transition-colors data-[state=checked]:border-amber-500 data-[state=checked]:bg-amber-50">
@@ -206,7 +206,7 @@ export default function AttendanceList() {
                           <Label
                             htmlFor={`late-${student.id}`}
                             className="cursor-pointer flex items-center font-medium text-amber-700">
-                            <Clock className="w-4 h-4 mr-1" /> Late
+                            <Clock className="w-4 h-4 mr-1" /> {t("attendance.status.late")}
                           </Label>
                         </div>
                       </RadioGroup>

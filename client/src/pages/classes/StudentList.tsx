@@ -29,6 +29,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 
 const createStudentSchema = api.students.create.input;
 
@@ -40,6 +41,7 @@ export default function StudentList() {
   const createStudent = useCreateStudent(classId);
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const { t } = useTranslation("common");
 
   const {
     register,
@@ -55,7 +57,7 @@ export default function StudentList() {
       await createStudent.mutateAsync(data);
       setOpen(false);
       reset();
-      toast({ title: "Student added successfully" });
+      toast({ title: t("students.save") });
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -70,94 +72,162 @@ export default function StudentList() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">
-            Students Roster
+            {t("students.title")}
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage enrollments and contact information.
-          </p>
+          <p className="text-muted-foreground mt-1">{t("students.subtitle")}</p>
         </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className="shadow-sm gap-2">
               <UserPlus className="w-4 h-4" />
-              Add Student
+              {t("students.add")}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-[95vw] md:max-w-3xl lg:max-w-5xl xl:max-w-[1200px]">
             <DialogHeader>
-              <DialogTitle>Add new student</DialogTitle>
-              <DialogDescription>
-                Enroll a new student to this class.
-              </DialogDescription>
+              <DialogTitle>{t("students.addTitle")}</DialogTitle>
+              <DialogDescription>{t("students.addSubtitle")}</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4">
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input id="lastName" placeholder="Nguyen" {...register("lastName")} />
+                  <Label htmlFor="lastName">{t("students.lastName")}</Label>
+                  <Input
+                    id="lastName"
+                    placeholder="Nguyen"
+                    {...register("lastName")}
+                  />
                   {"lastName" in errors && errors.lastName && (
-                    <p className="text-sm text-destructive">{errors.lastName.message as any}</p>
+                    <p className="text-sm text-destructive">
+                      {errors.lastName.message as any}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input id="firstName" placeholder="Van A" {...register("firstName")} />
+                  <Label htmlFor="firstName">{t("students.firstName")}</Label>
+                  <Input
+                    id="firstName"
+                    placeholder="Van A"
+                    {...register("firstName")}
+                  />
                   {"firstName" in errors && errors.firstName && (
-                    <p className="text-sm text-destructive">{errors.firstName.message as any}</p>
+                    <p className="text-sm text-destructive">
+                      {errors.firstName.message as any}
+                    </p>
                   )}
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                  <Input id="dateOfBirth" type="date" {...register("dateOfBirth")} />
+                  <Label htmlFor="dateOfBirth">{t("students.dob")}</Label>
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    {...register("dateOfBirth")}
+                  />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="phone">Student Phone</Label>
-                  <Input id="phone" placeholder="+84..." {...register("phone")} />
+                  <Label htmlFor="phone">{t("students.studentPhone")}</Label>
+                  <Input
+                    id="phone"
+                    placeholder="+84..."
+                    {...register("phone")}
+                  />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="nationality">Nationality</Label>
-                  <Input id="nationality" placeholder="Vietnamese" {...register("nationality")} />
+                  <Label htmlFor="nationality">
+                    {t("students.nationality")}
+                  </Label>
+                  <Input
+                    id="nationality"
+                    placeholder="Vietnamese"
+                    {...register("nationality")}
+                  />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input id="startDate" placeholder="YYYY or YYYY-MM-DD" {...register("startDate")} />
+                  <Label htmlFor="startDate">{t("students.startDate")}</Label>
+                  <Input
+                    id="startDate"
+                    placeholder="YYYY or YYYY-MM-DD"
+                    {...register("startDate")}
+                  />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="level">Level</Label>
-                  <Input id="level" placeholder="Sơ cấp 2" {...register("level")} />
+                  <Label htmlFor="level">{t("students.level")}</Label>
+                  <Input
+                    id="level"
+                    placeholder="Sơ cấp 2"
+                    {...register("level")}
+                  />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="healthStatus">Health Status</Label>
-                  <Input id="healthStatus" placeholder="Good" {...register("healthStatus")} />
+                  <Label htmlFor="healthStatus">
+                    {t("students.healthStatus")}
+                  </Label>
+                  <Input
+                    id="healthStatus"
+                    placeholder="Good"
+                    {...register("healthStatus")}
+                  />
                 </div>
                 <div className="space-y-2 xl:col-span-8">
-                  <Label htmlFor="address">Address</Label>
-                  <Input id="address" placeholder="Đào Tấn, Ba Đình, Hà Nội" {...register("address")} />
+                  <Label htmlFor="address">{t("students.address")}</Label>
+                  <Input
+                    id="address"
+                    placeholder="Đào Tấn, Ba Đình, Hà Nội"
+                    {...register("address")}
+                  />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="occupation">Occupation</Label>
-                  <Input id="occupation" placeholder="Đào tạo" {...register("occupation")} />
+                  <Label htmlFor="occupation">{t("students.occupation")}</Label>
+                  <Input
+                    id="occupation"
+                    placeholder="Đào tạo"
+                    {...register("occupation")}
+                  />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="height">Height</Label>
-                  <Input id="height" placeholder="1m67–1m7" {...register("height")} />
+                  <Label htmlFor="height">{t("students.height")}</Label>
+                  <Input
+                    id="height"
+                    placeholder="1m67–1m7"
+                    {...register("height")}
+                  />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="weight">Weight</Label>
-                  <Input id="weight" placeholder="56–58kg" {...register("weight")} />
+                  <Label htmlFor="weight">{t("students.weight")}</Label>
+                  <Input
+                    id="weight"
+                    placeholder="56–58kg"
+                    {...register("weight")}
+                  />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="trainingStatus">Training Status</Label>
-                  <Input id="trainingStatus" placeholder="..." {...register("trainingStatus")} />
+                  <Label htmlFor="trainingStatus">
+                    {t("students.trainingStatus")}
+                  </Label>
+                  <Input
+                    id="trainingStatus"
+                    placeholder="..."
+                    {...register("trainingStatus")}
+                  />
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="parentPhone">Parent/Guardian Phone</Label>
-                  <Input id="parentPhone" placeholder="+84..." {...register("parentPhone")} />
+                  <Label htmlFor="parentPhone">
+                    {t("students.parentPhone")}
+                  </Label>
+                  <Input
+                    id="parentPhone"
+                    placeholder="+84..."
+                    {...register("parentPhone")}
+                  />
                 </div>
                 <div className="space-y-2 xl:col-span-8">
-                  <Label htmlFor="note">Notes</Label>
-                  <Input id="note" placeholder="Allergies, accommodations, etc." {...register("note")} />
+                  <Label htmlFor="note">{t("students.note")}</Label>
+                  <Input
+                    id="note"
+                    placeholder="Allergies, accommodations, etc."
+                    {...register("note")}
+                  />
                 </div>
               </div>
               <DialogFooter className="pt-4">
@@ -165,7 +235,7 @@ export default function StudentList() {
                   {createStudent.isPending ? (
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   ) : (
-                    "Save Student"
+                    t("students.save")
                   )}
                 </Button>
               </DialogFooter>
@@ -183,20 +253,24 @@ export default function StudentList() {
           ) : students?.length === 0 ? (
             <div className="text-center py-16 px-4">
               <Users className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
-              <h3 className="text-lg font-medium">No students enrolled</h3>
+              <h3 className="text-lg font-medium">
+                {t("students.empty.title")}
+              </h3>
               <p className="text-muted-foreground mt-1">
-                Add students to build your roster.
+                {t("students.empty.description")}
               </p>
             </div>
           ) : (
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableHead className="w-[300px]">Name</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Parent Contact</TableHead>
-                  <TableHead>DOB</TableHead>
-                  <TableHead>Notes</TableHead>
+                  <TableHead className="w-[300px]">
+                    {t("students.table.name")}
+                  </TableHead>
+                  <TableHead>{t("students.table.contact")}</TableHead>
+                  <TableHead>{t("students.table.parentContact")}</TableHead>
+                  <TableHead>{t("students.table.dob")}</TableHead>
+                  <TableHead>{t("students.note")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

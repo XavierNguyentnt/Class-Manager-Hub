@@ -42,6 +42,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { useTranslation } from "react-i18next";
 
 export default function ClassDashboard() {
   const [, params] = useRoute("/classes/:id/dashboard");
@@ -60,6 +61,7 @@ export default function ClassDashboard() {
   const removeClassTeacher = useRemoveClassTeacher(classId);
   const addClassMonitor = useAddClassMonitor(classId);
   const removeClassMonitor = useRemoveClassMonitor(classId);
+  const { t } = useTranslation("common");
   const [selectedTeacher, setSelectedTeacher] = useState<string>("");
   const [selectedTeacherRole, setSelectedTeacherRole] = useState<
     "PRIMARY_TEACHER" | "ASSISTANT_TEACHER"
@@ -77,7 +79,7 @@ export default function ClassDashboard() {
     );
   }
 
-  if (!cls || !dashboard) return <div>Failed to load data</div>;
+  if (!cls || !dashboard) return <div>{t("dashboard.failedLoad")}</div>;
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -88,12 +90,12 @@ export default function ClassDashboard() {
 
   const chartData = [
     {
-      name: "Income",
+      name: t("chart.legend.income"),
       amount: dashboard.totalIncomeMonth,
       fill: "hsl(var(--chart-3))",
     },
     {
-      name: "Expense",
+      name: t("chart.legend.expense"),
       amount: dashboard.totalExpenseMonth,
       fill: "hsl(var(--chart-4))",
     },
@@ -103,25 +105,25 @@ export default function ClassDashboard() {
     <div className="p-6 md:p-10 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
         <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">
-          {cls.name} Dashboard
+          {t("dashboard.title", { name: cls.name })}
         </h1>
-        <p className="text-muted-foreground mt-1">
-          Overview of your class performance and financials this month.
-        </p>
+        <p className="text-muted-foreground mt-1">{t("dashboard.subtitle")}</p>
       </div>
       {user?.role === "ADMIN" && (
         <div className="bg-card border border-border/50 rounded-xl p-4 space-y-3">
-          <div className="text-sm font-medium">Assigned Teachers</div>
+          <div className="text-sm font-medium">
+            {t("dashboard.assignedTeachers")}
+          </div>
           <div className="flex flex-wrap gap-2">
-            {classTeachers?.map((t) => (
+            {classTeachers?.map((teacher) => (
               <Button
-                key={t.user.id}
+                key={teacher.user.id}
                 variant="outline"
                 size="sm"
                 disabled={removeClassTeacher.isPending}
                 onClick={async () => {
                   try {
-                    await removeClassTeacher.mutateAsync(t.user.id);
+                    await removeClassTeacher.mutateAsync(teacher.user.id);
                   } catch (error: any) {
                     toast({
                       variant: "destructive",
@@ -130,23 +132,22 @@ export default function ClassDashboard() {
                     });
                   }
                 }}>
-                {t.user.fullName} (
-                {t.teacherRole === "PRIMARY_TEACHER"
-                  ? "Giáo viên chính"
-                  : "Trợ giảng"}
-                )
+                {teacher.user.fullName} (
+                {t(`teacherRoles.${teacher.teacherRole}`)})
               </Button>
             ))}
           </div>
           <div className="flex items-end gap-4">
             <div className="flex-1">
-              <Label htmlFor="teacherId">Assigned Teacher</Label>
+              <Label htmlFor="teacherId">
+                {t("dashboard.assignedTeacherLabel")}
+              </Label>
               <select
                 id="teacherId"
                 className="border w-full rounded-md h-9 px-3 mt-1"
                 value={selectedTeacher}
                 onChange={(e) => setSelectedTeacher(e.target.value)}>
-                <option value="">— Select teacher —</option>
+                <option value="">{t("forms.selectTeacherPlaceholder")}</option>
                 {teachers?.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.fullName} ({t.email})
@@ -155,7 +156,9 @@ export default function ClassDashboard() {
               </select>
             </div>
             <div className="w-[220px]">
-              <Label htmlFor="teacherRole">Teacher Role</Label>
+              <Label htmlFor="teacherRole">
+                {t("dashboard.teacherRoleLabel")}
+              </Label>
               <select
                 id="teacherRole"
                 className="border w-full rounded-md h-9 px-3 mt-1"
@@ -165,8 +168,12 @@ export default function ClassDashboard() {
                     e.target.value as "PRIMARY_TEACHER" | "ASSISTANT_TEACHER",
                   )
                 }>
-                <option value="PRIMARY_TEACHER">Giáo viên chính</option>
-                <option value="ASSISTANT_TEACHER">Trợ giảng</option>
+                <option value="PRIMARY_TEACHER">
+                  {t("teacherRoles.PRIMARY_TEACHER")}
+                </option>
+                <option value="ASSISTANT_TEACHER">
+                  {t("teacherRoles.ASSISTANT_TEACHER")}
+                </option>
               </select>
             </div>
             <Button
@@ -187,11 +194,15 @@ export default function ClassDashboard() {
                   });
                 }
               }}>
-              {addClassTeacher.isPending ? "Adding..." : "Add Teacher"}
+              {addClassTeacher.isPending
+                ? t("common.adding")
+                : t("dashboard.addTeacher")}
             </Button>
           </div>
           <div className="pt-2 border-t border-border/50">
-            <div className="text-sm font-medium mb-2">Assigned Monitors</div>
+            <div className="text-sm font-medium mb-2">
+              {t("dashboard.assignedMonitors")}
+            </div>
             <div className="flex flex-wrap gap-2 mb-3">
               {classMonitors?.map((m) => (
                 <Button
@@ -218,13 +229,17 @@ export default function ClassDashboard() {
             </div>
             <div className="flex items-end gap-4">
               <div className="flex-1">
-                <Label htmlFor="monitorId">Assign Monitor</Label>
+                <Label htmlFor="monitorId">
+                  {t("dashboard.monitorAssignLabel")}
+                </Label>
                 <select
                   id="monitorId"
                   className="border w-full rounded-md h-9 px-3 mt-1"
                   value={selectedMonitor}
                   onChange={(e) => setSelectedMonitor(e.target.value)}>
-                  <option value="">— Select monitor —</option>
+                  <option value="">
+                    {t("forms.selectMonitorPlaceholder")}
+                  </option>
                   {monitors?.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.fullName} ({m.email})
@@ -233,7 +248,9 @@ export default function ClassDashboard() {
                 </select>
               </div>
               <div className="w-[220px]">
-                <Label htmlFor="monitorRole">Monitor Role</Label>
+                <Label htmlFor="monitorRole">
+                  {t("dashboard.monitorRoleLabel")}
+                </Label>
                 <select
                   id="monitorRole"
                   className="border w-full rounded-md h-9 px-3 mt-1"
@@ -243,8 +260,12 @@ export default function ClassDashboard() {
                       e.target.value as "CLASS_MONITOR" | "VICE_MONITOR",
                     )
                   }>
-                  <option value="CLASS_MONITOR">Lớp trưởng</option>
-                  <option value="VICE_MONITOR">Lớp phó</option>
+                  <option value="CLASS_MONITOR">
+                    {t("monitorRoles.CLASS_MONITOR")}
+                  </option>
+                  <option value="VICE_MONITOR">
+                    {t("monitorRoles.VICE_MONITOR")}
+                  </option>
                 </select>
               </div>
               <Button
@@ -265,7 +286,9 @@ export default function ClassDashboard() {
                     });
                   }
                 }}>
-                {addClassMonitor.isPending ? "Adding..." : "Add Monitor"}
+                {addClassMonitor.isPending
+                  ? t("common.adding")
+                  : t("dashboard.addMonitor")}
               </Button>
             </div>
           </div>
@@ -277,7 +300,7 @@ export default function ClassDashboard() {
         <Card className="shadow-sm border-border/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Students
+              {t("stats.totalStudents")}
             </CardTitle>
             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
               <Users className="h-4 w-4 text-primary" />
@@ -293,7 +316,7 @@ export default function ClassDashboard() {
         <Card className="shadow-sm border-border/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Monthly Income
+              {t("stats.monthlyIncome")}
             </CardTitle>
             <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
               <TrendingUp className="h-4 w-4 text-emerald-500" />
@@ -309,7 +332,7 @@ export default function ClassDashboard() {
         <Card className="shadow-sm border-border/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Monthly Expense
+              {t("stats.monthlyExpense")}
             </CardTitle>
             <div className="w-8 h-8 rounded-full bg-rose-500/10 flex items-center justify-center">
               <TrendingDown className="h-4 w-4 text-rose-500" />
@@ -325,7 +348,7 @@ export default function ClassDashboard() {
         <Card className="shadow-sm border-border/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Current Balance
+              {t("stats.currentBalance")}
             </CardTitle>
             <div className="w-8 h-8 rounded-full bg-indigo-500/10 flex items-center justify-center">
               <Wallet className="h-4 w-4 text-indigo-500" />
@@ -339,12 +362,12 @@ export default function ClassDashboard() {
               {dashboard.balance >= 0 ? (
                 <>
                   <ArrowUpRight className="w-3 h-3 mr-1 text-emerald-500" />{" "}
-                  Healthy standing
+                  {t("stats.healthy")}
                 </>
               ) : (
                 <>
                   <ArrowDownRight className="w-3 h-3 mr-1 text-rose-500" />{" "}
-                  Deficit
+                  {t("stats.deficit")}
                 </>
               )}
             </p>
@@ -356,9 +379,11 @@ export default function ClassDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-sm border-border/50">
           <CardHeader>
-            <CardTitle className="font-display">Financial Overview</CardTitle>
+            <CardTitle className="font-display">
+              {t("charts.financialOverview.title")}
+            </CardTitle>
             <CardDescription>
-              Income vs Expenses for the current month
+              {t("charts.financialOverview.subtitle")}
             </CardDescription>
           </CardHeader>
           <CardContent className="h-[300px]">
@@ -404,9 +429,11 @@ export default function ClassDashboard() {
         <Card className="shadow-sm border-border/50 bg-primary/5 border-primary/20">
           <CardHeader>
             <CardTitle className="font-display text-primary">
-              Class Activity
+              {t("charts.classActivity.title")}
             </CardTitle>
-            <CardDescription>Average attendance rate</CardDescription>
+            <CardDescription>
+              {t("charts.classActivity.subtitle")}
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center justify-center h-[250px]">
             <div className="relative w-48 h-48 flex items-center justify-center">
@@ -440,7 +467,7 @@ export default function ClassDashboard() {
                   {dashboard.averageAttendance.toFixed(1)}%
                 </span>
                 <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider mt-1">
-                  Present
+                  {t("nav.attendance")}
                 </span>
               </div>
             </div>
