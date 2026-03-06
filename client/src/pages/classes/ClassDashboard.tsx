@@ -43,6 +43,7 @@ import {
   Cell,
 } from "recharts";
 import { useTranslation } from "react-i18next";
+import { formatVNDAccounting, formatVNDCompact } from "@/lib/utils";
 
 export default function ClassDashboard() {
   const [, params] = useRoute("/classes/:id/dashboard");
@@ -81,12 +82,7 @@ export default function ClassDashboard() {
 
   if (!cls || !dashboard) return <div>{t("dashboard.failedLoad")}</div>;
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(val);
-  };
+  const formatCurrency = (val: number) => formatVNDAccounting(val);
 
   const chartData = [
     {
@@ -406,7 +402,7 @@ export default function ClassDashboard() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: "hsl(var(--muted-foreground))" }}
-                  tickFormatter={(value) => `$${value}`}
+                  tickFormatter={(value: any) => formatVNDCompact(Number(value))}
                 />
                 <Tooltip
                   cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}

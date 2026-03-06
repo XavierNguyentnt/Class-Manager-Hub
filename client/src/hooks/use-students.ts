@@ -3,6 +3,7 @@ import { api, buildUrl } from "@shared/routes";
 import { z } from "zod";
 
 type CreateStudentInput = z.infer<typeof api.students.create.input>;
+type UpdateStudentInput = z.infer<typeof api.students.update.input>;
 
 export function useStudents(classId: string | number) {
   return useQuery({
@@ -30,6 +31,42 @@ export function useCreateStudent(classId: string | number) {
       });
       if (!res.ok) throw new Error("Failed to create student");
       return api.students.create.responses[201].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.students.list.path, classId] });
+      queryClient.invalidateQueries({ queryKey: [api.classes.dashboard.path, classId] });
+    },
+  });
+}
+
+export function useUpdateStudent(classId: string | number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateStudentInput }) => {
+      const url = buildUrl(api.students.update.path, { classId, id });
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update student");
+      return api.students.update.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.students.list.path, classId] });
+    },
+  });
+}
+
+export function useDeleteStudent(classId: string | number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const url = buildUrl(api.students.delete.path, { classId, id });
+      const res = await fetch(url, { method: "DELETE", credentials: "include" });
+      if (!res.ok) throw new Error("Failed to delete student");
+      return api.students.delete.responses[200].parse(await res.json());
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.students.list.path, classId] });

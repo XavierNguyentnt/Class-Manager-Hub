@@ -15,11 +15,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Loader2, Save, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Loader2, Save, CheckCircle2, XCircle, Clock, Calendar as CalendarIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "react-i18next";
+import { formatFullName, parseDateInputToISO } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as DayCalendar } from "@/components/ui/calendar";
 
 type Status = "PRESENT" | "ABSENT" | "LATE";
 
@@ -28,9 +31,8 @@ export default function AttendanceList() {
   const classId = params?.id || "";
   const { t } = useTranslation("common");
 
-  const [selectedDate, setSelectedDate] = useState(
-    format(new Date(), "yyyy-MM-dd"),
-  );
+  const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [dateText, setDateText] = useState(format(new Date(), "dd/MM/yyyy"));
 
   const { data: students, isLoading: isLoadingStudents } = useStudents(classId);
   const { data: attendances, isLoading: isLoadingAttendances } = useAttendances(
@@ -102,13 +104,44 @@ export default function AttendanceList() {
         <div className="flex items-center gap-4">
           <div className="space-y-1">
             <Label htmlFor="date-picker" className="text-xs text-muted-foreground">{t("attendance.selectDate")}</Label>
-            <Input
-              id="date-picker"
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="w-auto font-medium"
-            />
+            <div className="flex items-center gap-2">
+              <Input
+                id="date-picker"
+                type="text"
+                value={dateText}
+                placeholder="dd/MM/yyyy"
+                onChange={(e) => {
+                  const v = normalizeDateTyping(e.target.value);
+                  setDateText(v);
+                  const iso = parseDateInputToISO(v);
+                  if (iso) setSelectedDate(iso);
+                }}
+                className="w-auto font-medium"
+              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline">
+                    <CalendarIcon className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0">
+                  <DayCalendar
+                    mode="single"
+                    selected={new Date(parseDateInputToISO(dateText) || selectedDate)}
+                    defaultMonth={new Date()}
+                    onSelect={(d) => {
+                      if (!d) return;
+                      const dd = String(d.getDate()).padStart(2, "0");
+                      const mm = String(d.getMonth() + 1).padStart(2, "0");
+                      const yyyy = d.getFullYear();
+                      const disp = `${dd}/${mm}/${yyyy}`;
+                      setDateText(disp);
+                      setSelectedDate(`${yyyy}-${mm}-${dd}`);
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           <Button
             onClick={handleSave}
@@ -163,7 +196,7 @@ export default function AttendanceList() {
                             .charAt(0)
                             .toUpperCase()}
                         </div>
-                        {`${student.lastName} ${student.firstName}`}
+                        {formatFullName(student.firstName, student.lastName)}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -220,4 +253,11 @@ export default function AttendanceList() {
       </Card>
     </div>
   );
+}
+
+function normalizeDateTyping(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length >= 5) return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  if (digits.length >= 3) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return digits;
 }

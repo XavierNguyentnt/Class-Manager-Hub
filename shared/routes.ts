@@ -202,6 +202,24 @@ export const api = {
         400: errorSchemas.validation,
       },
     },
+    update: {
+      method: "PATCH" as const,
+      path: "/api/classes/:classId/students/:id" as const,
+      input: insertStudentSchema.partial(),
+      responses: {
+        200: z.custom<typeof students.$inferSelect>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: "DELETE" as const,
+      path: "/api/classes/:classId/students/:id" as const,
+      responses: {
+        200: z.object({ success: z.boolean() }),
+        404: errorSchemas.notFound,
+      },
+    },
   },
   transactions: {
     list: {
@@ -220,6 +238,31 @@ export const api = {
       responses: {
         201: z.custom<typeof transactions.$inferSelect>(),
         400: errorSchemas.validation,
+      },
+    },
+    update: {
+      method: "PATCH" as const,
+      path: "/api/classes/:classId/transactions/:id" as const,
+      input: insertTransactionSchema
+        .extend({
+          amount: z
+            .union([z.string(), z.number()])
+            .optional()
+            .transform((val) => (val === undefined ? val : Number(val))),
+        })
+        .partial(),
+      responses: {
+        200: z.custom<typeof transactions.$inferSelect>(),
+        400: errorSchemas.validation,
+        404: errorSchemas.notFound,
+      },
+    },
+    delete: {
+      method: "DELETE" as const,
+      path: "/api/classes/:classId/transactions/:id" as const,
+      responses: {
+        200: z.object({ success: z.boolean() }),
+        404: errorSchemas.notFound,
       },
     },
   },

@@ -3,6 +3,7 @@ import { api, buildUrl } from "@shared/routes";
 import { z } from "zod";
 
 type CreateTransactionInput = z.infer<typeof api.transactions.create.input>;
+type UpdateTransactionInput = z.infer<typeof api.transactions.update.input>;
 
 export function useTransactions(classId: string | number) {
   return useQuery({
@@ -30,6 +31,43 @@ export function useCreateTransaction(classId: string | number) {
       });
       if (!res.ok) throw new Error("Failed to create transaction");
       return api.transactions.create.responses[201].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.transactions.list.path, classId] });
+      queryClient.invalidateQueries({ queryKey: [api.classes.dashboard.path, classId] });
+    },
+  });
+}
+
+export function useUpdateTransaction(classId: string | number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateTransactionInput }) => {
+      const url = buildUrl(api.transactions.update.path, { classId, id });
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update transaction");
+      return api.transactions.update.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.transactions.list.path, classId] });
+      queryClient.invalidateQueries({ queryKey: [api.classes.dashboard.path, classId] });
+    },
+  });
+}
+
+export function useDeleteTransaction(classId: string | number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const url = buildUrl(api.transactions.delete.path, { classId, id });
+      const res = await fetch(url, { method: "DELETE", credentials: "include" });
+      if (!res.ok) throw new Error("Failed to delete transaction");
+      return api.transactions.delete.responses[200].parse(await res.json());
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.transactions.list.path, classId] });

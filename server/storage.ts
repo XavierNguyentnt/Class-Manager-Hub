@@ -30,12 +30,24 @@ export interface IStorage {
   // Students
   getStudentsByClass(classId: string): Promise<Student[]>;
   createStudent(student: Omit<Student, "id" | "createdAt">): Promise<Student>;
+  updateStudent(
+    classId: string,
+    id: string,
+    patch: Partial<Omit<Student, "id" | "classId" | "createdAt">>,
+  ): Promise<Student | undefined>;
+  deleteStudent(classId: string, id: string): Promise<boolean>;
 
   // Transactions
   getTransactionsByClass(classId: string): Promise<Transaction[]>;
   createTransaction(
     transaction: Omit<Transaction, "id" | "createdAt" | "updatedAt">,
   ): Promise<Transaction>;
+  updateTransaction(
+    classId: string,
+    id: string,
+    patch: Partial<Omit<Transaction, "id" | "classId" | "createdBy" | "createdAt" | "updatedAt">>,
+  ): Promise<Transaction | undefined>;
+  deleteTransaction(classId: string, id: string): Promise<boolean>;
 
   // Attendance
   getAttendancesByClass(classId: string, date?: string): Promise<Attendance[]>;
@@ -103,6 +115,26 @@ export class DatabaseStorage implements IStorage {
     return newStudent;
   }
 
+  async updateStudent(
+    classId: string,
+    id: string,
+    patch: Partial<Omit<Student, "id" | "classId" | "createdAt">>,
+  ): Promise<Student | undefined> {
+    const [updated] = await db
+      .update(students)
+      .set(patch as any)
+      .where(and(eq(students.id, id), eq(students.classId, classId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteStudent(classId: string, id: string): Promise<boolean> {
+    const result = await db
+      .delete(students)
+      .where(and(eq(students.id, id), eq(students.classId, classId)));
+    return !!result;
+  }
+
   async getTransactionsByClass(classId: string): Promise<Transaction[]> {
     return await db
       .select()
@@ -121,6 +153,30 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return newTransaction;
+  }
+
+  async updateTransaction(
+    classId: string,
+    id: string,
+    patch: Partial<Omit<Transaction, "id" | "classId" | "createdBy" | "createdAt" | "updatedAt">>,
+  ): Promise<Transaction | undefined> {
+    const updates: any = { ...patch };
+    if (updates.amount !== undefined) {
+      updates.amount = String(updates.amount);
+    }
+    const [updated] = await db
+      .update(transactions)
+      .set({ ...updates, updatedAt: new Date() } as any)
+      .where(and(eq(transactions.id, id), eq(transactions.classId, classId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteTransaction(classId: string, id: string): Promise<boolean> {
+    const result = await db
+      .delete(transactions)
+      .where(and(eq(transactions.id, id), eq(transactions.classId, classId)));
+    return !!result;
   }
 
   async getAttendancesByClass(

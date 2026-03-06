@@ -122,7 +122,7 @@
   "transactions.type.income": "Income (Fee)",
   "transactions.type.expense": "Expense",
   "transactions.date": "Date",
-  "transactions.amount": "Amount ($)",
+  "transactions.amount": "Amount (VND)",
   "transactions.category": "Category",
   "transactions.person": "Person (Optional)",
   "transactions.description": "Description (Optional)",
@@ -136,5 +136,14 @@
   "transactions.table.description": "Description",
   "transactions.table.person": "Person",
   "transactions.table.amount": "Amount",
+  "transactions.categories.income.tuition": "Tuition",
+  "transactions.categories.income.donation": "Donation",
+  "transactions.categories.other": "Other",
+  "transactions.categories.expense.field": "Training field fee",
+  "transactions.categories.expense.food": "Food",
+  "transactions.categories.expense.developmentFund": "Development Fund",
+  "transactions.categories.expense.donation": "Donation",
+  "transactions.categories.expense.reward": "Reward",
+  "transactions.categories.expense.gift": "Gift",
   "common.adding": "Adding..."
 }

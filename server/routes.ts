@@ -668,6 +668,63 @@ export async function registerRoutes(
     }
   });
 
+  app.patch(api.students.update.path, requireAuth, async (req: any, res) => {
+    try {
+      const classId = req.params.classId;
+      const id = req.params.id;
+      const cls = await requireClassPermission(
+        req,
+        res,
+        classId,
+        "students_manage",
+      );
+      if (!cls) return;
+      const input = api.students.update.input.parse(req.body);
+      const normalize = (v?: string | null) => {
+        if (v === undefined || v === null) return v as any;
+        const s = String(v).trim();
+        if (!s) return null;
+        if (/^\d{4}$/.test(s)) return `${s}-01-01`;
+        if (/^\d{4}-\d{2}$/.test(s)) return `${s}-01`;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        throw new Error("Invalid date format. Use YYYY or YYYY-MM-DD");
+      };
+      const patch: any = { ...input };
+      if ("dateOfBirth" in patch) patch.dateOfBirth = normalize(patch.dateOfBirth);
+      if ("startDate" in patch) patch.startDate = normalize(patch.startDate);
+      const updated = await storage.updateStudent(classId, id, patch);
+      if (!updated) return res.status(404).json({ message: "Student not found" });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof Error && /Invalid date format/.test(err.message)) {
+        return res.status(400).json({ message: err.message, field: "date" });
+      }
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal Error" });
+    }
+  });
+
+  app.delete(api.students.delete.path, requireAuth, async (req: any, res) => {
+    try {
+      const classId = req.params.classId;
+      const id = req.params.id;
+      const cls = await requireClassPermission(
+        req,
+        res,
+        classId,
+        "students_manage",
+      );
+      if (!cls) return;
+      const ok = await storage.deleteStudent(classId, id);
+      if (!ok) return res.status(404).json({ message: "Student not found" });
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Internal Error" });
+    }
+  });
+
   // Transactions
   app.get(api.transactions.list.path, requireAuth, async (req: any, res) => {
     const classId = req.params.classId;
@@ -711,6 +768,59 @@ export async function registerRoutes(
     }
   });
 
+  app.patch(
+    api.transactions.update.path,
+    requireAuth,
+    async (req: any, res) => {
+      try {
+        const classId = req.params.classId;
+        const id = req.params.id;
+        const cls = await requireClassPermission(
+          req,
+          res,
+          classId,
+          "financials_manage",
+        );
+        if (!cls) return;
+        const input = api.transactions.update.input.parse(req.body);
+        const patch: any = { ...input };
+        if (patch.amount !== undefined) patch.amount = Number(patch.amount);
+        const updated = await storage.updateTransaction(classId, id, patch);
+        if (!updated)
+          return res.status(404).json({ message: "Transaction not found" });
+        res.json(updated);
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return res.status(400).json({ message: err.errors[0].message });
+        }
+        res.status(500).json({ message: "Internal Error" });
+      }
+    },
+  );
+
+  app.delete(
+    api.transactions.delete.path,
+    requireAuth,
+    async (req: any, res) => {
+      try {
+        const classId = req.params.classId;
+        const id = req.params.id;
+        const cls = await requireClassPermission(
+          req,
+          res,
+          classId,
+          "financials_manage",
+        );
+        if (!cls) return;
+        const ok = await storage.deleteTransaction(classId, id);
+        if (!ok)
+          return res.status(404).json({ message: "Transaction not found" });
+        res.json({ success: true });
+      } catch {
+        res.status(500).json({ message: "Internal Error" });
+      }
+    },
+  );
   // Attendance
   app.get(api.attendances.list.path, requireAuth, async (req: any, res) => {
     const classId = req.params.classId;

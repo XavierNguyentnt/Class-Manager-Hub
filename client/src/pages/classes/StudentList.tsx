@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useRoute } from "wouter";
-import { useStudents, useCreateStudent } from "@/hooks/use-students";
+import {
+  useStudents,
+  useCreateStudent,
+  useUpdateStudent,
+  useDeleteStudent,
+} from "@/hooks/use-students";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,13 +27,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Loader2, UserPlus, Phone, Calendar, Users } from "lucide-react";
+import {
+  Plus,
+  Loader2,
+  UserPlus,
+  Phone,
+  Calendar,
+  Users,
+  Calendar as CalendarIcon,
+} from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as DayCalendar } from "@/components/ui/calendar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
+import { formatDateDisplay, formatFullName } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 
 const createStudentSchema = api.students.create.input;
@@ -39,14 +67,18 @@ export default function StudentList() {
 
   const { data: students, isLoading } = useStudents(classId);
   const createStudent = useCreateStudent(classId);
+  const updateStudent = useUpdateStudent(classId);
+  const deleteStudent = useDeleteStudent(classId);
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState<string | null>(null);
   const { t } = useTranslation("common");
 
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<z.infer<typeof createStudentSchema>>({
     resolver: zodResolver(createStudentSchema),
@@ -54,10 +86,57 @@ export default function StudentList() {
 
   const onSubmit = async (data: z.infer<typeof createStudentSchema>) => {
     try {
-      await createStudent.mutateAsync(data);
+      const payload = { ...data } as any;
+      if (payload.dateOfBirth)
+        payload.dateOfBirth = (await import("@/lib/utils")).parseDateInputToISO(
+          payload.dateOfBirth,
+        );
+      if (payload.startDate)
+        payload.startDate = (await import("@/lib/utils")).parseDateInputToISO(
+          payload.startDate,
+        );
+      if (!data.trainingStatus || !data.trainingStatus.trim())
+        data.trainingStatus = "ACTIVE" as any;
+      await createStudent.mutateAsync(payload);
       setOpen(false);
       reset();
       toast({ title: t("students.save") });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
+
+  const onUpdate = async (
+    id: string,
+    data: Partial<z.infer<typeof createStudentSchema>>,
+  ) => {
+    try {
+      await updateStudent.mutateAsync({ id, data });
+      setEditOpen(null);
+      toast({ title: t("students.save") });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
+
+  const onChangeStatus = async (
+    id: string,
+    status: "ACTIVE" | "INACTIVE" | "SUSPEND",
+  ) => {
+    try {
+      await updateStudent.mutateAsync({
+        id,
+        data: { trainingStatus: status } as any,
+      });
+      toast({ title: "OK" });
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -92,23 +171,10 @@ export default function StudentList() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-4">
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="lastName">{t("students.lastName")}</Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Nguyen"
-                    {...register("lastName")}
-                  />
-                  {"lastName" in errors && errors.lastName && (
-                    <p className="text-sm text-destructive">
-                      {errors.lastName.message as any}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2 xl:col-span-2">
                   <Label htmlFor="firstName">{t("students.firstName")}</Label>
                   <Input
                     id="firstName"
-                    placeholder="Van A"
+                    placeholder="Nguyen"
                     {...register("firstName")}
                   />
                   {"firstName" in errors && errors.firstName && (
@@ -118,12 +184,58 @@ export default function StudentList() {
                   )}
                 </div>
                 <div className="space-y-2 xl:col-span-2">
-                  <Label htmlFor="dateOfBirth">{t("students.dob")}</Label>
+                  <Label htmlFor="lastName">{t("students.lastName")}</Label>
                   <Input
-                    id="dateOfBirth"
-                    type="date"
-                    {...register("dateOfBirth")}
+                    id="lastName"
+                    placeholder="Van A"
+                    {...register("lastName")}
                   />
+                  {"lastName" in errors && errors.lastName && (
+                    <p className="text-sm text-destructive">
+                      {errors.lastName.message as any}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2 xl:col-span-2">
+                  <Label htmlFor="dateOfBirth">{t("students.dob")}</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="dateOfBirth"
+                      type="text"
+                      placeholder="dd/MM/yyyy"
+                      {...register("dateOfBirth", {
+                        onChange: (e) => {
+                          e.target.value = normalizeDateTyping(e.target.value);
+                        },
+                      })}
+                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button type="button" variant="outline">
+                          <CalendarIcon className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="p-0">
+                        <DayCalendar
+                          mode="single"
+                          onSelect={(d) => {
+                            if (!d) return;
+                            const dd = String(d.getDate()).padStart(2, "0");
+                            const mm = String(d.getMonth() + 1).padStart(
+                              2,
+                              "0",
+                            );
+                            const yyyy = d.getFullYear();
+                            setValue(
+                              "dateOfBirth",
+                              `${dd}/${mm}/${yyyy}` as any,
+                              { shouldDirty: true },
+                            );
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
                 <div className="space-y-2 xl:col-span-2">
                   <Label htmlFor="phone">{t("students.studentPhone")}</Label>
@@ -145,11 +257,44 @@ export default function StudentList() {
                 </div>
                 <div className="space-y-2 xl:col-span-2">
                   <Label htmlFor="startDate">{t("students.startDate")}</Label>
-                  <Input
-                    id="startDate"
-                    placeholder="YYYY or YYYY-MM-DD"
-                    {...register("startDate")}
-                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="startDate"
+                      type="text"
+                      placeholder="dd/MM/yyyy"
+                      {...register("startDate", {
+                        onChange: (e) => {
+                          e.target.value = normalizeDateTyping(e.target.value);
+                        },
+                      })}
+                    />
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button type="button" variant="outline">
+                          <CalendarIcon className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="p-0">
+                        <DayCalendar
+                          mode="single"
+                          onSelect={(d) => {
+                            if (!d) return;
+                            const dd = String(d.getDate()).padStart(2, "0");
+                            const mm = String(d.getMonth() + 1).padStart(
+                              2,
+                              "0",
+                            );
+                            const yyyy = d.getFullYear();
+                            setValue(
+                              "startDate",
+                              `${dd}/${mm}/${yyyy}` as any,
+                              { shouldDirty: true },
+                            );
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
                 <div className="space-y-2 xl:col-span-2">
                   <Label htmlFor="level">{t("students.level")}</Label>
@@ -271,6 +416,7 @@ export default function StudentList() {
                   <TableHead>{t("students.table.parentContact")}</TableHead>
                   <TableHead>{t("students.table.dob")}</TableHead>
                   <TableHead>{t("students.note")}</TableHead>
+                  <TableHead className="w-[140px] text-right"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -285,7 +431,19 @@ export default function StudentList() {
                             .charAt(0)
                             .toUpperCase()}
                         </div>
-                        {`${student.lastName} ${student.firstName}`}
+                        <div className="flex items-center gap-2">
+                          <span>
+                            {formatFullName(
+                              student.firstName,
+                              student.lastName,
+                            )}
+                          </span>
+                          {student.trainingStatus && (
+                            <Badge variant="outline">
+                              {student.trainingStatus}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -311,7 +469,7 @@ export default function StudentList() {
                       {student.dateOfBirth ? (
                         <div className="flex items-center text-sm">
                           <Calendar className="w-3 h-3 mr-2 text-muted-foreground" />
-                          {format(new Date(student.dateOfBirth), "MMM d, yyyy")}
+                          {formatDateDisplay(student.dateOfBirth)}
                         </div>
                       ) : (
                         <span className="text-muted-foreground/50">-</span>
@@ -319,6 +477,50 @@ export default function StudentList() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
                       {student.note || "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Dialog
+                          open={editOpen === student.id}
+                          onOpenChange={(v) =>
+                            setEditOpen(v ? student.id : null)
+                          }>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              Edit
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[600px]">
+                            <DialogHeader>
+                              <DialogTitle>Edit Student</DialogTitle>
+                              <DialogDescription>
+                                {t("students.addSubtitle")}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <EditStudentForm
+                              initial={student}
+                              onCancel={() => setEditOpen(null)}
+                              onSave={(data) => onUpdate(student.id, data)}
+                            />
+                          </DialogContent>
+                        </Dialog>
+                        <Select
+                          onValueChange={(v) =>
+                            onChangeStatus(student.id, v as any)
+                          }
+                          defaultValue={
+                            (student.trainingStatus as any) || "ACTIVE"
+                          }>
+                          <SelectTrigger className="w-[160px]">
+                            <SelectValue placeholder="Trạng thái" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ACTIVE">Active</SelectItem>
+                            <SelectItem value="INACTIVE">Inactive</SelectItem>
+                            <SelectItem value="SUSPEND">Suspend</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -329,4 +531,188 @@ export default function StudentList() {
       </Card>
     </div>
   );
+}
+
+function EditStudentForm({
+  initial,
+  onSave,
+  onCancel,
+}: {
+  initial: any;
+  onSave: (data: any) => void;
+  onCancel: () => void;
+}) {
+  const { register, handleSubmit, setValue } = useForm<any>({
+    defaultValues: {
+      firstName: initial.firstName,
+      lastName: initial.lastName,
+      dateOfBirth: initial.dateOfBirth || "",
+      phone: initial.phone || "",
+      parentPhone: initial.parentPhone || "",
+      note: initial.note || "",
+      nationality: initial.nationality || "",
+      startDate: initial.startDate || "",
+      level: initial.level || "",
+      healthStatus: initial.healthStatus || "",
+      address: initial.address || "",
+      occupation: initial.occupation || "",
+      height: initial.height || "",
+      weight: initial.weight || "",
+      trainingStatus: initial.trainingStatus || "",
+    },
+  });
+  return (
+    <form
+      onSubmit={handleSubmit((data) => {
+        Object.keys(data).forEach((k) => {
+          if (data[k] === "") data[k] = null;
+        });
+        const patch = { ...data };
+        if (patch.dateOfBirth) {
+          const { parseDateInputToISO } = require("@/lib/utils");
+          patch.dateOfBirth = parseDateInputToISO(patch.dateOfBirth);
+        }
+        if (patch.startDate) {
+          const { parseDateInputToISO } = require("@/lib/utils");
+          patch.startDate = parseDateInputToISO(patch.startDate);
+        }
+        onSave(patch);
+      })}
+      className="space-y-4 pt-2">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label>Họ</Label>
+          <Input {...register("lastName")} />
+        </div>
+        <div>
+          <Label>Tên</Label>
+          <Input {...register("firstName")} />
+        </div>
+        <div>
+          <Label>Ngày sinh</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              type="text"
+              placeholder="dd/MM/yyyy"
+              {...register("dateOfBirth", {
+                onChange: (e) => {
+                  e.target.value = normalizeDateTyping(e.target.value);
+                },
+              })}
+            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="outline">
+                  <CalendarIcon className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0">
+                <DayCalendar
+                  mode="single"
+                  onSelect={(d) => {
+                    if (!d) return;
+                    const dd = String(d.getDate()).padStart(2, "0");
+                    const mm = String(d.getMonth() + 1).padStart(2, "0");
+                    const yyyy = d.getFullYear();
+                    setValue("dateOfBirth", `${dd}/${mm}/${yyyy}`);
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+        <div>
+          <Label>SĐT</Label>
+          <Input {...register("phone")} />
+        </div>
+        <div>
+          <Label>SĐT phụ huynh</Label>
+          <Input {...register("parentPhone")} />
+        </div>
+        <div>
+          <Label>Quốc tịch</Label>
+          <Input {...register("nationality")} />
+        </div>
+        <div>
+          <Label>Ngày bắt đầu</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              type="text"
+              placeholder="dd/MM/yyyy"
+              {...register("startDate", {
+                onChange: (e) => {
+                  e.target.value = normalizeDateTyping(e.target.value);
+                },
+              })}
+            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="outline">
+                  <CalendarIcon className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0">
+                <DayCalendar
+                  mode="single"
+                  onSelect={(d) => {
+                    if (!d) return;
+                    const dd = String(d.getDate()).padStart(2, "0");
+                    const mm = String(d.getMonth() + 1).padStart(2, "0");
+                    const yyyy = d.getFullYear();
+                    setValue("startDate", `${dd}/${mm}/${yyyy}`);
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+        <div>
+          <Label>Trình độ</Label>
+          <Input {...register("level")} />
+        </div>
+        <div>
+          <Label>Tình trạng sức khỏe</Label>
+          <Input {...register("healthStatus")} />
+        </div>
+        <div className="col-span-2">
+          <Label>Địa chỉ</Label>
+          <Input {...register("address")} />
+        </div>
+        <div>
+          <Label>Nghề nghiệp</Label>
+          <Input {...register("occupation")} />
+        </div>
+        <div>
+          <Label>Chiều cao</Label>
+          <Input {...register("height")} />
+        </div>
+        <div>
+          <Label>Cân nặng</Label>
+          <Input {...register("weight")} />
+        </div>
+        <div>
+          <Label>Tình trạng tập luyện</Label>
+          <Input {...register("trainingStatus")} />
+        </div>
+        <div className="col-span-2">
+          <Label>Ghi chú</Label>
+          <Input {...register("note")} />
+        </div>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Hủy
+        </Button>
+        <Button type="submit">Lưu</Button>
+      </DialogFooter>
+    </form>
+  );
+}
+
+function normalizeDateTyping(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length >= 5)
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  if (digits.length >= 3) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return digits;
 }
