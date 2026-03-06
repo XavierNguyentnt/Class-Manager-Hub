@@ -45,6 +45,8 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useOffDay, useSetOffDay, useClearOffDay } from "@/hooks/use-off-days";
+import { useMonthlyAttendanceReport } from "@/hooks/use-attendance-report";
+import { useMonthlyOffDays } from "@/hooks/use-off-days-month";
 
 type Status = "PRESENT" | "ABSENT" | "LATE";
 
@@ -134,6 +136,9 @@ export default function AttendanceList() {
     }
     return result;
   }, [scheduleIndices, selectedYear, selectedMonth]);
+
+  const attendanceMap = useMonthlyAttendanceReport(classId, monthSessions);
+  const offMonthMap = useMonthlyOffDays(classId, monthSessions);
 
   useEffect(() => {
     if (scheduleIndices && scheduleIndices.length > 0) {
@@ -434,6 +439,89 @@ export default function AttendanceList() {
             </Badge>
           ))}
         </div>
+      )}
+
+      {monthSessions.length > 0 && (
+        <Card className="border-border/50 shadow-sm overflow-hidden">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="min-w-[900px] w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50">
+                    <th className="sticky left-0 bg-muted/50 px-4 py-2 text-left w-[280px]">
+                      {t("attendance.table.studentName")}
+                    </th>
+                    {monthSessions.map((d) => (
+                      <th key={d} className="px-2 py-2 whitespace-nowrap">
+                        {format(new Date(d), "dd/MM")}
+                      </th>
+                    ))}
+                    <th className="px-4 py-2 whitespace-nowrap">
+                      {t("attendance.summary")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeStudents.map((s) => (
+                    <tr key={s.id} className="border-t">
+                      <td className="sticky left-0 bg-card px-4 py-2 font-medium">
+                        {formatFullName(s.firstName, s.lastName)}
+                      </td>
+                      {monthSessions.map((d) => {
+                        const off = offMonthMap.data?.[d];
+                        const list = (attendanceMap.data?.[d] ?? []) as Array<{
+                          studentId: string;
+                          status: Status;
+                        }>;
+                        const rec = list.find((a) => a.studentId === s.id);
+                        let cls = "text-center w-10 h-10";
+                        let content: React.ReactNode = "";
+                        if (off) {
+                          cls += " bg-muted";
+                        } else if (rec?.status === "PRESENT") {
+                          cls += " text-emerald-600";
+                          content = "✓";
+                        } else if (rec?.status === "ABSENT") {
+                          cls += " bg-rose-500/80 text-white";
+                          content = "x";
+                        } else if (rec?.status === "LATE") {
+                          cls += " text-amber-600";
+                          content = "•";
+                        }
+                        return (
+                          <td key={`${s.id}-${d}`} className={cls}>
+                            {content}
+                          </td>
+                        );
+                      })}
+                      {(() => {
+                        let p = 0,
+                          a = 0,
+                          l = 0;
+                        for (const d of monthSessions) {
+                          if (offMonthMap.data?.[d]) continue;
+                          const list = (attendanceMap.data?.[d] ??
+                            []) as Array<{ studentId: string; status: Status }>;
+                          const rec = list.find((r) => r.studentId === s.id);
+                          if (rec?.status === "PRESENT") p++;
+                          else if (rec?.status === "ABSENT") a++;
+                          else if (rec?.status === "LATE") l++;
+                        }
+                        return (
+                          <td className="px-4 py-2 whitespace-nowrap text-xs">
+                            <span className="text-emerald-600">✓ {p}</span> /{" "}
+                            <span className="text-rose-600">x {a}</span> /{" "}
+                            <span className="text-amber-600">• {l}</span>
+                          </td>
+                        );
+                      })()}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="flex items-center gap-2">

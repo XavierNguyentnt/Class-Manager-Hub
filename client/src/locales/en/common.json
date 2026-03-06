@@ -83,6 +83,7 @@
   "attendance.sessions": "Sessions",
   "attendance.filter.year": "Year",
   "attendance.filter.month": "Month",
+  "attendance.summary": "Summary",
   "attendance.save": "Save Attendance",
   "attendance.off.set": "Off (Cancel)",
   "attendance.off.reason": "Off reason",
