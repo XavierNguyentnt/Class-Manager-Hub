@@ -5,6 +5,7 @@ import {
   numeric,
   timestamp,
   unique,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -22,6 +23,7 @@ export const classes = pgTable("classes", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   description: text("description"),
+  scheduleDays: jsonb("schedule_days").$type<string[] | null>().default(null),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -106,6 +108,19 @@ export const attendances = pgTable("attendances", {
   date: text("date").notNull(),
   status: text("status").notNull(),
   note: text("note"),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const classOffDays = pgTable("class_off_days", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  classId: uuid("class_id")
+    .notNull()
+    .references(() => classes.id, { onDelete: "cascade" }),
+  date: text("date").notNull(),
+  reason: text("reason"),
   createdBy: uuid("created_by")
     .notNull()
     .references(() => users.id),

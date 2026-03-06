@@ -8,6 +8,7 @@ import {
   students,
   transactions,
   attendances,
+  classOffDays,
   type User,
   type Class,
   type Student,
@@ -54,6 +55,10 @@ export interface IStorage {
   createAttendance(
     attendances: Omit<Attendance, "id" | "createdAt">[],
   ): Promise<void>;
+  // Off days
+  getOffDay(classId: string, date: string): Promise<{ id: string; date: string; reason: string | null } | null>;
+  setOffDay(classId: string, date: string, reason: string, createdBy: string): Promise<void>;
+  clearOffDay(classId: string, date: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -212,6 +217,30 @@ export class DatabaseStorage implements IStorage {
 
       await db.insert(attendances).values(records);
     }
+  }
+
+  async getOffDay(classId: string, date: string) {
+    const [row] = await db
+      .select()
+      .from(classOffDays)
+      .where(and(eq(classOffDays.classId, classId), eq(classOffDays.date, date)));
+    return row || null;
+  }
+
+  async setOffDay(classId: string, date: string, reason: string, createdBy: string) {
+    // Upsert: remove existing and insert
+    await db
+      .delete(classOffDays)
+      .where(and(eq(classOffDays.classId, classId), eq(classOffDays.date, date)));
+    await db
+      .insert(classOffDays)
+      .values({ classId, date, reason, createdBy });
+  }
+
+  async clearOffDay(classId: string, date: string) {
+    await db
+      .delete(classOffDays)
+      .where(and(eq(classOffDays.classId, classId), eq(classOffDays.date, date)));
   }
 }
 

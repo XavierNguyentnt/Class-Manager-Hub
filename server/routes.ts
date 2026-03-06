@@ -300,6 +300,7 @@ export async function registerRoutes(
       const cls = await storage.createClass({
         name: input.name,
         description: input.description ?? null,
+        scheduleDays: (input as any).scheduleDays ?? null,
       });
       await db.insert(classTeachers).values({
         classId: cls.id,
@@ -358,6 +359,36 @@ export async function registerRoutes(
           .select()
           .from(classes)
           .where(eq(classes.id, classId));
+        res.json(updated);
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return res.status(400).json({ message: err.errors[0].message });
+        }
+        res.status(500).json({ message: "Internal Error" });
+      }
+    },
+  );
+
+  // Update class schedule (PRIMARY_TEACHER, CLASS_MONITOR, ADMIN)
+  app.patch(
+    api.classes.updateSchedule.path,
+    requireAuth,
+    async (req: any, res) => {
+      try {
+        const classId = req.params.id;
+        const cls = await requireClassPermission(
+          req,
+          res,
+          classId,
+          "dashboard",
+        );
+        if (!cls) return;
+        const input = api.classes.updateSchedule.input.parse(req.body);
+        const [updated] = await db
+          .update(classes)
+          .set({ scheduleDays: input.scheduleDays })
+          .where(eq(classes.id, classId))
+          .returning();
         res.json(updated);
       } catch (err) {
         if (err instanceof z.ZodError) {
@@ -839,6 +870,65 @@ export async function registerRoutes(
     res.json(attendances);
   });
 
+  // Off days
+  app.get(api.offDays.get.path, requireAuth, async (req: any, res) => {
+    const classId = req.params.classId;
+    const cls = await requireClassPermission(
+      req,
+      res,
+      classId,
+      "attendance_view",
+    );
+    if (!cls) return;
+    const date = (req.query.date as string | undefined) ?? undefined;
+    if (date) {
+      const off = await storage.getOffDay(classId, date);
+      res.json(off ? [off] : []);
+    } else {
+      // For simplicity, return empty array if no range provided
+      res.json([]);
+    }
+  });
+
+  app.post(api.offDays.set.path, requireAuth, async (req: any, res) => {
+    try {
+      const classId = req.params.classId;
+      const cls = await requireClassPermission(
+        req,
+        res,
+        classId,
+        "attendance_take",
+      );
+      if (!cls) return;
+      const input = api.offDays.set.input.parse(req.body);
+      await storage.setOffDay(classId, input.date, input.reason, req.user.id);
+      res.status(201).json({ success: true });
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0].message });
+      }
+      res.status(500).json({ message: "Internal Error" });
+    }
+  });
+
+  app.delete(api.offDays.clear.path, requireAuth, async (req: any, res) => {
+    try {
+      const classId = req.params.classId;
+      const cls = await requireClassPermission(
+        req,
+        res,
+        classId,
+        "attendance_take",
+      );
+      if (!cls) return;
+      const date = req.params.date;
+      await storage.clearOffDay(classId, date);
+      res.json({ success: true });
+    } catch {
+      res.status(500).json({ message: "Internal Error" });
+    }
+  });
+
   app.post(api.attendances.create.path, requireAuth, async (req: any, res) => {
     try {
       const classId = req.params.classId;
@@ -850,6 +940,10 @@ export async function registerRoutes(
       );
       if (!cls) return;
       const input = api.attendances.create.input.parse(req.body);
+      const off = await storage.getOffDay(classId, input.date);
+      if (off) {
+        return res.status(400).json({ message: "Class is off on this date" });
+      }
 
       const records = input.records.map((r) => ({
         classId,
@@ -889,6 +983,7 @@ async function seedDatabase() {
     const cls = await storage.createClass({
       name: "IELTS Mastery 2026",
       description: "Intensive IELTS preparation class",
+      scheduleDays: ["SUN"],
     });
     await db.insert(classTeachers).values({
       classId: cls.id,
