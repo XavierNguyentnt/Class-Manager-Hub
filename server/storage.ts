@@ -6,14 +6,17 @@ import {
   classMonitors,
   classTeachers,
   students,
+  studentSuspensions,
   transactions,
   attendances,
   type User,
   type Class,
   type Student,
+  type StudentSuspension,
   type Transaction,
   type Attendance,
   type InsertUser,
+  type InsertStudentSuspension,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -36,6 +39,32 @@ export interface IStorage {
     patch: Partial<Omit<Student, "id" | "classId" | "createdAt">>,
   ): Promise<Student | undefined>;
   deleteStudent(classId: string, id: string): Promise<boolean>;
+
+  // Student suspensions
+  getStudentSuspensionsByClass(classId: string): Promise<StudentSuspension[]>;
+  getStudentSuspensions(
+    classId: string,
+    studentId: string,
+  ): Promise<StudentSuspension[]>;
+  createStudentSuspension(
+    suspension: Omit<InsertStudentSuspension, "id" | "createdAt" | "updatedAt">,
+  ): Promise<StudentSuspension>;
+  updateStudentSuspension(
+    classId: string,
+    studentId: string,
+    suspensionId: string,
+    patch: Partial<
+      Omit<
+        StudentSuspension,
+        "id" | "classId" | "studentId" | "createdBy" | "createdAt" | "updatedAt"
+      >
+    >,
+  ): Promise<StudentSuspension | undefined>;
+  deleteStudentSuspension(
+    classId: string,
+    studentId: string,
+    suspensionId: string,
+  ): Promise<boolean>;
 
   // Transactions
   getTransactionsByClass(classId: string): Promise<Transaction[]>;
@@ -132,6 +161,82 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .delete(students)
       .where(and(eq(students.id, id), eq(students.classId, classId)));
+    return !!result;
+  }
+
+  async getStudentSuspensionsByClass(
+    classId: string,
+  ): Promise<StudentSuspension[]> {
+    return await db
+      .select()
+      .from(studentSuspensions)
+      .where(eq(studentSuspensions.classId, classId));
+  }
+
+  async getStudentSuspensions(
+    classId: string,
+    studentId: string,
+  ): Promise<StudentSuspension[]> {
+    return await db
+      .select()
+      .from(studentSuspensions)
+      .where(
+        and(
+          eq(studentSuspensions.classId, classId),
+          eq(studentSuspensions.studentId, studentId),
+        ),
+      );
+  }
+
+  async createStudentSuspension(
+    suspension: Omit<InsertStudentSuspension, "id" | "createdAt" | "updatedAt">,
+  ): Promise<StudentSuspension> {
+    const [row] = await db
+      .insert(studentSuspensions)
+      .values({ ...(suspension as any), updatedAt: new Date() } as any)
+      .returning();
+    return row;
+  }
+
+  async updateStudentSuspension(
+    classId: string,
+    studentId: string,
+    suspensionId: string,
+    patch: Partial<
+      Omit<
+        StudentSuspension,
+        "id" | "classId" | "studentId" | "createdBy" | "createdAt" | "updatedAt"
+      >
+    >,
+  ): Promise<StudentSuspension | undefined> {
+    const [row] = await db
+      .update(studentSuspensions)
+      .set({ ...(patch as any), updatedAt: new Date() } as any)
+      .where(
+        and(
+          eq(studentSuspensions.id, suspensionId),
+          eq(studentSuspensions.classId, classId),
+          eq(studentSuspensions.studentId, studentId),
+        ),
+      )
+      .returning();
+    return row;
+  }
+
+  async deleteStudentSuspension(
+    classId: string,
+    studentId: string,
+    suspensionId: string,
+  ): Promise<boolean> {
+    const result = await db
+      .delete(studentSuspensions)
+      .where(
+        and(
+          eq(studentSuspensions.id, suspensionId),
+          eq(studentSuspensions.classId, classId),
+          eq(studentSuspensions.studentId, studentId),
+        ),
+      );
     return !!result;
   }
 

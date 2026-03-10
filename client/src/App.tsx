@@ -14,6 +14,7 @@ import ClassDashboard from "@/pages/classes/ClassDashboard";
 import StudentList from "@/pages/classes/StudentList";
 import TransactionList from "@/pages/classes/TransactionList";
 import AttendanceList from "@/pages/classes/AttendanceList";
+import TuitionTracker from "@/pages/classes/TuitionTracker";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -50,6 +51,14 @@ function Router() {
         <ProtectedRoute>
           <Layout>
             <TransactionList />
+          </Layout>
+        </ProtectedRoute>
+      </Route>
+
+      <Route path="/classes/:id/tuition">
+        <ProtectedRoute>
+          <Layout>
+            <TuitionTracker />
           </Layout>
         </ProtectedRoute>
       </Route>

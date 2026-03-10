@@ -4,6 +4,9 @@ import { z } from "zod";
 
 type CreateStudentInput = z.infer<typeof api.students.create.input>;
 type UpdateStudentInput = z.infer<typeof api.students.update.input>;
+type StudentSuspension = z.infer<
+  (typeof api.students.suspensionsByClass.responses)[200]
+>[0];
 
 export function useStudents(classId: string | number) {
   return useQuery({
@@ -71,6 +74,130 @@ export function useDeleteStudent(classId: string | number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.students.list.path, classId] });
       queryClient.invalidateQueries({ queryKey: [api.classes.dashboard.path, classId] });
+    },
+  });
+}
+
+export function useStudentSuspensionsByClass(classId: string | number) {
+  return useQuery<StudentSuspension[]>({
+    queryKey: [api.students.suspensionsByClass.path, classId],
+    queryFn: async () => {
+      const url = buildUrl(api.students.suspensionsByClass.path, { classId });
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch suspensions");
+      return api.students.suspensionsByClass.responses[200].parse(await res.json());
+    },
+    enabled: !!classId,
+  });
+}
+
+export function useStudentSuspensions(classId: string | number, id: string) {
+  return useQuery<StudentSuspension[]>({
+    queryKey: [api.students.suspensions.list.path, classId, id],
+    queryFn: async () => {
+      const url = buildUrl(api.students.suspensions.list.path, { classId, id });
+      const res = await fetch(url, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch suspensions");
+      return api.students.suspensions.list.responses[200].parse(await res.json());
+    },
+    enabled: !!classId && !!id,
+  });
+}
+
+export function useCreateStudentSuspension(classId: string | number, id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      data: z.infer<typeof api.students.suspensions.create.input>,
+    ) => {
+      const url = buildUrl(api.students.suspensions.create.path, { classId, id });
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "Failed to create suspension");
+      }
+      return api.students.suspensions.create.responses[201].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [api.students.suspensions.list.path, classId, id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [api.students.suspensionsByClass.path, classId],
+      });
+      queryClient.invalidateQueries({ queryKey: [api.students.list.path, classId] });
+    },
+  });
+}
+
+export function useUpdateStudentSuspension(classId: string | number, id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      suspensionId,
+      data,
+    }: {
+      suspensionId: string;
+      data: z.infer<typeof api.students.suspensions.update.input>;
+    }) => {
+      const url = buildUrl(api.students.suspensions.update.path, {
+        classId,
+        id,
+        suspensionId,
+      });
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "Failed to update suspension");
+      }
+      return api.students.suspensions.update.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [api.students.suspensions.list.path, classId, id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [api.students.suspensionsByClass.path, classId],
+      });
+      queryClient.invalidateQueries({ queryKey: [api.students.list.path, classId] });
+    },
+  });
+}
+
+export function useDeleteStudentSuspension(classId: string | number, id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (suspensionId: string) => {
+      const url = buildUrl(api.students.suspensions.delete.path, {
+        classId,
+        id,
+        suspensionId,
+      });
+      const res = await fetch(url, { method: "DELETE", credentials: "include" });
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "Failed to delete suspension");
+      }
+      return api.students.suspensions.delete.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [api.students.suspensions.list.path, classId, id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [api.students.suspensionsByClass.path, classId],
+      });
+      queryClient.invalidateQueries({ queryKey: [api.students.list.path, classId] });
     },
   });
 }

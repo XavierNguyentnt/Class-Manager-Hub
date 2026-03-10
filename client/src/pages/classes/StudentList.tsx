@@ -5,6 +5,10 @@ import {
   useCreateStudent,
   useUpdateStudent,
   useDeleteStudent,
+  useStudentSuspensions,
+  useCreateStudentSuspension,
+  useUpdateStudentSuspension,
+  useDeleteStudentSuspension,
 } from "@/hooks/use-students";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -801,6 +805,10 @@ function EditStudentForm({
           <Input {...register("note")} />
         </div>
       </div>
+      <StudentSuspensionsEditor
+        classId={initial.classId}
+        studentId={initial.id}
+      />
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onCancel}>
           Hủy
@@ -808,6 +816,192 @@ function EditStudentForm({
         <Button type="submit">Lưu</Button>
       </DialogFooter>
     </form>
+  );
+}
+
+function StudentSuspensionsEditor({
+  classId,
+  studentId,
+}: {
+  classId: string;
+  studentId: string;
+}) {
+  const { toast } = useToast();
+  const { data, isLoading } = useStudentSuspensions(classId, studentId);
+  const createMut = useCreateStudentSuspension(classId, studentId);
+  const updateMut = useUpdateStudentSuspension(classId, studentId);
+  const deleteMut = useDeleteStudentSuspension(classId, studentId);
+  const [drafts, setDrafts] = useState<Record<string, any>>({});
+  const [newFrom, setNewFrom] = useState("");
+  const [newTo, setNewTo] = useState("");
+  const [newNote, setNewNote] = useState("");
+
+  const rows = (data || []).slice().sort((a: any, b: any) => {
+    const aa = String(a.effectiveFrom || "");
+    const bb = String(b.effectiveFrom || "");
+    return aa === bb ? 0 : aa < bb ? 1 : -1;
+  });
+
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="font-medium">Lịch sử tạm dừng</div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-2 items-end">
+        <div>
+          <Label>Từ ngày</Label>
+          <Input
+            type="date"
+            value={newFrom}
+            onChange={(e) => setNewFrom(e.target.value)}
+          />
+        </div>
+        <div>
+          <Label>Đến ngày</Label>
+          <Input
+            type="date"
+            value={newTo}
+            onChange={(e) => setNewTo(e.target.value)}
+          />
+        </div>
+        <div className="md:col-span-2">
+          <Label>Ghi chú</Label>
+          <Input value={newNote} onChange={(e) => setNewNote(e.target.value)} />
+        </div>
+        <Button
+          type="button"
+          disabled={!newFrom || createMut.isPending}
+          onClick={async () => {
+            try {
+              await createMut.mutateAsync({
+                effectiveFrom: newFrom,
+                effectiveTo: newTo || null,
+                note: newNote || null,
+              } as any);
+              setNewFrom("");
+              setNewTo("");
+              setNewNote("");
+              toast({ title: "Đã thêm khoảng tạm dừng" });
+            } catch (e: any) {
+              toast({
+                variant: "destructive",
+                title: "Error",
+                description: e.message,
+              });
+            }
+          }}>
+          Thêm khoảng
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="text-sm text-muted-foreground">Đang tải...</div>
+      ) : rows.length === 0 ? (
+        <div className="text-sm text-muted-foreground">
+          Chưa có khoảng tạm dừng.
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {rows.map((p: any) => {
+            const d = drafts[p.id] || {
+              effectiveFrom: p.effectiveFrom || "",
+              effectiveTo: p.effectiveTo || "",
+              note: p.note || "",
+            };
+            return (
+              <div
+                key={p.id}
+                className="grid grid-cols-1 md:grid-cols-6 gap-2 items-end">
+                <div className="md:col-span-2">
+                  <Label>Từ</Label>
+                  <Input
+                    type="date"
+                    value={d.effectiveFrom}
+                    onChange={(e) =>
+                      setDrafts((m) => ({
+                        ...m,
+                        [p.id]: { ...d, effectiveFrom: e.target.value },
+                      }))
+                    }
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Đến</Label>
+                  <Input
+                    type="date"
+                    value={d.effectiveTo || ""}
+                    onChange={(e) =>
+                      setDrafts((m) => ({
+                        ...m,
+                        [p.id]: { ...d, effectiveTo: e.target.value },
+                      }))
+                    }
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <Label>Ghi chú</Label>
+                  <Input
+                    value={d.note || ""}
+                    onChange={(e) =>
+                      setDrafts((m) => ({
+                        ...m,
+                        [p.id]: { ...d, note: e.target.value },
+                      }))
+                    }
+                  />
+                </div>
+                <div className="md:col-span-6 flex items-center gap-2">
+                  <Button
+                    type="button"
+                    disabled={updateMut.isPending}
+                    onClick={async () => {
+                      try {
+                        await updateMut.mutateAsync({
+                          suspensionId: p.id,
+                          data: {
+                            effectiveFrom: d.effectiveFrom,
+                            effectiveTo: d.effectiveTo ? d.effectiveTo : null,
+                            note: d.note || null,
+                          } as any,
+                        });
+                        setDrafts((m) => {
+                          const { [p.id]: _, ...rest } = m;
+                          return rest;
+                        });
+                        toast({ title: "Đã lưu" });
+                      } catch (e: any) {
+                        toast({
+                          variant: "destructive",
+                          title: "Error",
+                          description: e.message,
+                        });
+                      }
+                    }}>
+                    Lưu
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={deleteMut.isPending}
+                    onClick={async () => {
+                      try {
+                        await deleteMut.mutateAsync(p.id);
+                        toast({ title: "Đã xóa" });
+                      } catch (e: any) {
+                        toast({
+                          variant: "destructive",
+                          title: "Error",
+                          description: e.message,
+                        });
+                      }
+                    }}>
+                    Xóa
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 

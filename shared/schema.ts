@@ -76,17 +76,37 @@ export const students = pgTable("students", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+export const studentSuspensions = pgTable("student_suspensions", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  classId: uuid("class_id")
+    .notNull()
+    .references(() => classes.id, { onDelete: "cascade" }),
+  studentId: uuid("student_id")
+    .notNull()
+    .references(() => students.id, { onDelete: "cascade" }),
+  effectiveFrom: text("effective_from").notNull(),
+  effectiveTo: text("effective_to"),
+  note: text("note"),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 export const transactions = pgTable("transactions", {
   id: uuid("id").primaryKey().defaultRandom(),
   classId: uuid("class_id")
     .notNull()
     .references(() => classes.id, { onDelete: "cascade" }),
+  studentId: uuid("student_id").references(() => students.id),
   type: text("type").notNull(),
   amount: numeric("amount", { precision: 12, scale: 2 }).notNull(),
   category: text("category").notNull(),
   description: text("description"),
   person: text("person"),
   note: text("note"),
+  appliedPeriod: text("applied_period"),
   date: text("date").notNull(),
   createdBy: uuid("created_by")
     .notNull()
@@ -126,6 +146,16 @@ export const insertStudentSchema = createInsertSchema(students).omit({
   createdAt: true,
   classId: true,
 });
+export const insertStudentSuspensionSchema = createInsertSchema(
+  studentSuspensions,
+).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  classId: true,
+  studentId: true,
+  createdBy: true,
+});
 export const insertTransactionSchema = createInsertSchema(transactions).omit({
   id: true,
   createdAt: true,
@@ -146,6 +176,8 @@ export type Class = typeof classes.$inferSelect;
 export type ClassMonitor = typeof classMonitors.$inferSelect;
 export type ClassTeacher = typeof classTeachers.$inferSelect;
 export type Student = typeof students.$inferSelect;
+export type StudentSuspension = typeof studentSuspensions.$inferSelect;
 export type Transaction = typeof transactions.$inferSelect;
 export type Attendance = typeof attendances.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
+export type InsertStudentSuspension = typeof studentSuspensions.$inferInsert;

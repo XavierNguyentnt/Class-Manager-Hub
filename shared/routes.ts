@@ -3,11 +3,13 @@ import {
   insertUserSchema,
   insertClassSchema,
   insertStudentSchema,
+  insertStudentSuspensionSchema,
   insertTransactionSchema,
   insertAttendanceSchema,
   users,
   classes,
   students,
+  studentSuspensions,
   transactions,
   attendances,
 } from "./schema";
@@ -218,6 +220,57 @@ export const api = {
       responses: {
         200: z.object({ success: z.boolean() }),
         404: errorSchemas.notFound,
+      },
+    },
+    suspensionsByClass: {
+      method: "GET" as const,
+      path: "/api/classes/:classId/student-suspensions" as const,
+      responses: {
+        200: z.array(z.custom<typeof studentSuspensions.$inferSelect>()),
+      },
+    },
+    suspensions: {
+      list: {
+        method: "GET" as const,
+        path: "/api/classes/:classId/students/:id/suspensions" as const,
+        responses: {
+          200: z.array(z.custom<typeof studentSuspensions.$inferSelect>()),
+        },
+      },
+      create: {
+        method: "POST" as const,
+        path: "/api/classes/:classId/students/:id/suspensions" as const,
+        input: insertStudentSuspensionSchema.extend({
+          effectiveFrom: z.string(),
+          effectiveTo: z.string().optional().nullable(),
+        }),
+        responses: {
+          201: z.custom<typeof studentSuspensions.$inferSelect>(),
+          400: errorSchemas.validation,
+        },
+      },
+      update: {
+        method: "PATCH" as const,
+        path: "/api/classes/:classId/students/:id/suspensions/:suspensionId" as const,
+        input: insertStudentSuspensionSchema
+          .extend({
+            effectiveFrom: z.string().optional(),
+            effectiveTo: z.string().optional().nullable(),
+          })
+          .partial(),
+        responses: {
+          200: z.custom<typeof studentSuspensions.$inferSelect>(),
+          400: errorSchemas.validation,
+          404: errorSchemas.notFound,
+        },
+      },
+      delete: {
+        method: "DELETE" as const,
+        path: "/api/classes/:classId/students/:id/suspensions/:suspensionId" as const,
+        responses: {
+          200: z.object({ success: z.boolean() }),
+          404: errorSchemas.notFound,
+        },
       },
     },
   },

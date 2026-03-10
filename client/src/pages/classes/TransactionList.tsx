@@ -84,6 +84,7 @@ export default function TransactionList() {
   const classId = params?.id || "";
 
   const { data: transactions, isLoading } = useTransactions(classId);
+  const { data: students } = useStudents(classId);
   const createTx = useCreateTransaction(classId);
   const updateTx = useUpdateTransaction(classId);
   const deleteTx = useDeleteTransaction(classId);
@@ -99,6 +100,35 @@ export default function TransactionList() {
     from?: string;
     to?: string;
   }>({});
+  const [sortState, setSortState] = useState<{
+    key: "date" | "type" | "category" | "person" | "amount";
+    dir: "asc" | "desc";
+  }>({ key: "date", dir: "desc" });
+  const [appliedPeriodFilter, setAppliedPeriodFilter] = useState<string>("");
+  const [studentFilter, setStudentFilter] = useState<string>("");
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const sort = sp.get("sort");
+      const dir = sp.get("dir");
+      const keys = ["date", "type", "category", "person", "amount"] as const;
+      const validKey = keys.includes((sort as any) || "");
+      const validDir = dir === "asc" || dir === "desc";
+      if (validKey && validDir) {
+        setSortState({ key: sort as any, dir: dir as any });
+      }
+    } catch {}
+  }, []);
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      sp.set("sort", sortState.key);
+      sp.set("dir", sortState.dir);
+      const url =
+        window.location.pathname + "?" + sp.toString() + window.location.hash;
+      window.history.replaceState(null, "", url);
+    } catch {}
+  }, [sortState]);
   useEffect(() => {
     const handler = (e: Event) =>
       setCategoryFilter((e as CustomEvent<string>).detail || "");
@@ -118,6 +148,22 @@ export default function TransactionList() {
     window.addEventListener("tx-date-filter", handler as any);
     return () => window.removeEventListener("tx-date-filter", handler as any);
   }, []);
+  useEffect(() => {
+    const handler = (e: Event) =>
+      setAppliedPeriodFilter(((e as CustomEvent<string>).detail as any) || "");
+    window.addEventListener("tx-applied-period", handler as any);
+    return () =>
+      window.removeEventListener("tx-applied-period", handler as any);
+  }, []);
+  useEffect(() => {
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const applied = sp.get("applied");
+      const student = sp.get("student");
+      if (applied) setAppliedPeriodFilter(applied);
+      if (student) setStudentFilter(student);
+    } catch {}
+  }, []);
 
   const {
     register,
@@ -132,6 +178,7 @@ export default function TransactionList() {
     defaultValues: {
       type: "INCOME",
       date: format(new Date(), "yyyy-MM-dd"),
+      appliedPeriod: format(new Date(), "yyyy-MM"),
     },
   });
 
@@ -156,6 +203,7 @@ export default function TransactionList() {
   if (!watch("category")) {
     setValue("category", categories[0]);
   }
+  const categoryVal = watch("category");
 
   const ymNow = format(new Date(), "yyyy-MM");
   const monthIncome = (transactions || []).reduce((sum, tx) => {
@@ -186,12 +234,39 @@ export default function TransactionList() {
       : sum - Number(tx.amount);
   }, 0);
 
+  const findStudentIdByPerson = (person?: string | null) => {
+    const p = (person || "").trim().toLowerCase().replace(/\s+/g, " ");
+    if (!p) return undefined;
+    const list = (students || []) as any[];
+    const hit = list.find((s) => {
+      const full = `${s.firstName || ""} ${s.lastName || ""}`
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+      return full === p;
+    });
+    return hit?.id as string | undefined;
+  };
+
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
       const payload = { ...data, date: parseDateInputToISO(data.date) as any };
+      if (
+        payload.type === "INCOME" &&
+        payload.category === "transactions.categories.income.tuition" &&
+        !payload.studentId &&
+        payload.person
+      ) {
+        payload.studentId = findStudentIdByPerson(payload.person) || null;
+      }
       await createTx.mutateAsync(payload as any);
       setOpen(false);
-      reset({ type: "INCOME", date: format(new Date(), "yyyy-MM-dd") });
+      reset({
+        type: "INCOME",
+        date: format(new Date(), "yyyy-MM-dd"),
+        appliedPeriod: format(new Date(), "yyyy-MM"),
+        studentId: "",
+      });
       toast({ title: t("transactions.recorded") });
     } catch (error: any) {
       toast({
@@ -398,11 +473,34 @@ export default function TransactionList() {
                     <PersonCombobox
                       classId={classId}
                       value={field.value || ""}
-                      onChange={field.onChange}
+                      onChange={(label) => {
+                        field.onChange(label);
+                      }}
+                      onSelectId={(id) => setValue("studentId", id as any)}
                     />
                   )}
                 />
+                <input type="hidden" {...register("studentId" as any)} />
               </div>
+
+              {typeVal === "INCOME" &&
+                categoryVal === "transactions.categories.income.tuition" && (
+                  <div className="space-y-2">
+                    <Label htmlFor="appliedPeriod">Kỳ học phí (YYYY-MM)</Label>
+                    <Controller
+                      control={control}
+                      name="appliedPeriod"
+                      render={({ field }) => (
+                        <Input
+                          id="appliedPeriod"
+                          type="month"
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e.target.value)}
+                        />
+                      )}
+                    />
+                  </div>
+                )}
 
               <div className="space-y-2">
                 <Label htmlFor="description">
@@ -466,6 +564,7 @@ export default function TransactionList() {
 
       <TransactionCategoryFilter />
       <TransactionDateFilters />
+      <TuitionPeriodFilter />
 
       <Card className="border-border/50 shadow-sm overflow-hidden">
         <CardContent className="p-0">
@@ -487,13 +586,86 @@ export default function TransactionList() {
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow>
-                  <TableHead>{t("transactions.table.date")}</TableHead>
-                  <TableHead>{t("transactions.table.type")}</TableHead>
-                  <TableHead>{t("transactions.table.category")}</TableHead>
+                  <TableHead>
+                    <button
+                      className="flex items-center gap-1"
+                      onClick={() =>
+                        setSortState((s) => ({
+                          key: "date",
+                          dir:
+                            s.key === "date" && s.dir === "asc"
+                              ? "desc"
+                              : "asc",
+                        }))
+                      }>
+                      {t("transactions.table.date")}
+                      <ChevronsUpDown className="w-3 h-3" />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      className="flex items-center gap-1"
+                      onClick={() =>
+                        setSortState((s) => ({
+                          key: "type",
+                          dir:
+                            s.key === "type" && s.dir === "asc"
+                              ? "desc"
+                              : "asc",
+                        }))
+                      }>
+                      {t("transactions.table.type")}
+                      <ChevronsUpDown className="w-3 h-3" />
+                    </button>
+                  </TableHead>
+                  <TableHead>
+                    <button
+                      className="flex items-center gap-1"
+                      onClick={() =>
+                        setSortState((s) => ({
+                          key: "category",
+                          dir:
+                            s.key === "category" && s.dir === "asc"
+                              ? "desc"
+                              : "asc",
+                        }))
+                      }>
+                      {t("transactions.table.category")}
+                      <ChevronsUpDown className="w-3 h-3" />
+                    </button>
+                  </TableHead>
                   <TableHead>{t("transactions.table.description")}</TableHead>
-                  <TableHead>{t("transactions.table.person")}</TableHead>
+                  <TableHead>
+                    <button
+                      className="flex items-center gap-1"
+                      onClick={() =>
+                        setSortState((s) => ({
+                          key: "person",
+                          dir:
+                            s.key === "person" && s.dir === "asc"
+                              ? "desc"
+                              : "asc",
+                        }))
+                      }>
+                      {t("transactions.table.person")}
+                      <ChevronsUpDown className="w-3 h-3" />
+                    </button>
+                  </TableHead>
                   <TableHead className="text-right">
-                    {t("transactions.table.amount")}
+                    <button
+                      className="flex items-center gap-1 ml-auto"
+                      onClick={() =>
+                        setSortState((s) => ({
+                          key: "amount",
+                          dir:
+                            s.key === "amount" && s.dir === "asc"
+                              ? "desc"
+                              : "asc",
+                        }))
+                      }>
+                      {t("transactions.table.amount")}
+                      <ChevronsUpDown className="w-3 h-3" />
+                    </button>
                   </TableHead>
                   <TableHead className="text-right"></TableHead>
                 </TableRow>
@@ -506,6 +678,16 @@ export default function TransactionList() {
                       ? typeof tx.category === "string" &&
                         tx.category.startsWith("transactions.categories.") &&
                         tx.category === categoryFilter
+                      : true,
+                  )
+                  .filter((tx) =>
+                    appliedPeriodFilter
+                      ? (tx as any).appliedPeriod === appliedPeriodFilter
+                      : true,
+                  )
+                  .filter((tx) =>
+                    studentFilter
+                      ? (tx as any).studentId === studentFilter
                       : true,
                   )
                   .filter((tx) => {
@@ -538,6 +720,42 @@ export default function TransactionList() {
                     }
                     return true;
                   })
+                  .sort((a, b) => {
+                    const dir = sortState.dir === "asc" ? 1 : -1;
+                    const k = sortState.key;
+                    if (k === "date") {
+                      const da = new Date(a.date as any).getTime();
+                      const db = new Date(b.date as any).getTime();
+                      return da === db ? 0 : da < db ? -1 * dir : 1 * dir;
+                    }
+                    if (k === "amount") {
+                      const aa = Number(a.amount);
+                      const ab = Number(b.amount);
+                      return aa === ab ? 0 : aa < ab ? -1 * dir : 1 * dir;
+                    }
+                    if (k === "type") {
+                      const sa = a.type || "";
+                      const sb = b.type || "";
+                      return sa.localeCompare(sb) * dir;
+                    }
+                    if (k === "category") {
+                      const sa =
+                        typeof a.category === "string"
+                          ? a.category
+                          : String(a.category);
+                      const sb =
+                        typeof b.category === "string"
+                          ? b.category
+                          : String(b.category);
+                      return sa.localeCompare(sb) * dir;
+                    }
+                    if (k === "person") {
+                      const sa = (a.person || "").toLowerCase();
+                      const sb = (b.person || "").toLowerCase();
+                      return sa.localeCompare(sb) * dir;
+                    }
+                    return 0;
+                  })
                   .map((tx) => (
                     <TableRow
                       key={tx.id}
@@ -567,6 +785,11 @@ export default function TransactionList() {
                         tx.category.startsWith("transactions.categories.")
                           ? t(tx.category)
                           : tx.category}
+                        {(tx as any).appliedPeriod ? (
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            Kỳ học phí: {(tx as any).appliedPeriod}
+                          </div>
+                        ) : null}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
                         {tx.description || "-"}
@@ -879,6 +1102,40 @@ function TransactionDateFilters() {
   );
 }
 
+function TuitionPeriodFilter() {
+  const [value, setValue] = useState<string>("");
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <Label className="text-sm">Kỳ học phí</Label>
+        <Input
+          className="w-[160px]"
+          type="month"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            window.dispatchEvent(
+              new CustomEvent("tx-applied-period", {
+                detail: e.target.value || "",
+              }),
+            );
+          }}
+        />
+        <Button
+          variant="outline"
+          onClick={() => {
+            setValue("");
+            window.dispatchEvent(
+              new CustomEvent("tx-applied-period", { detail: "" }),
+            );
+          }}>
+          Xóa kỳ
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function EditTransactionForm({
   initial,
   onSave,
@@ -889,12 +1146,15 @@ function EditTransactionForm({
   onCancel: () => void;
 }) {
   const { t } = useTranslation("common");
+  const { data: students } = useStudents(initial.classId);
   const { register, handleSubmit, control, watch, setValue } = useForm<any>({
     defaultValues: {
       type: initial.type,
       date: initial.date,
       amount: Number(initial.amount),
       category: initial.category,
+      appliedPeriod: initial.appliedPeriod || "",
+      studentId: initial.studentId || "",
       description: initial.description || "",
       person: initial.person || "",
       note: initial.note || "",
@@ -920,12 +1180,45 @@ function EditTransactionForm({
   ) as readonly string[];
   const currentCat = watch("category");
   if (!currentCat) setValue("category", categories[0]);
+  const categoryVal = watch("category");
+  const findStudentIdByPerson = (person?: string | null) => {
+    const p = (person || "").trim().toLowerCase().replace(/\s+/g, " ");
+    if (!p) return undefined;
+    const list = (students || []) as any[];
+    const hit = list.find((s) => {
+      const full = `${s.firstName || ""} ${s.lastName || ""}`
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
+      return full === p;
+    });
+    return hit?.id as string | undefined;
+  };
   return (
     <form
       onSubmit={handleSubmit((data) => {
         Object.keys(data).forEach((k) => {
           if (data[k] === "") data[k] = null;
         });
+        if (data.amount !== undefined) data.amount = Number(data.amount);
+        if (data.appliedPeriod) {
+          const v = String(data.appliedPeriod);
+          // ensure format YYYY-MM
+          if (/^\d{4}-\d{2}$/.test(v)) {
+            // ok
+          } else if (/^\d{2}\/\d{4}$/.test(v)) {
+            const [mm, yyyy] = v.split("/");
+            (data as any).appliedPeriod = `${yyyy}-${mm}`;
+          }
+        }
+        if (
+          data.type === "INCOME" &&
+          data.category === "transactions.categories.income.tuition" &&
+          !data.studentId &&
+          data.person
+        ) {
+          data.studentId = findStudentIdByPerson(data.person) || null;
+        }
         onSave(data);
       })}
       className="space-y-4 pt-2">
@@ -1028,10 +1321,31 @@ function EditTransactionForm({
               classId={initial.classId}
               value={field.value || ""}
               onChange={field.onChange}
+              onSelectId={(id) =>
+                setValue("studentId", id as any, { shouldDirty: true })
+              }
             />
           )}
         />
+        <input type="hidden" {...register("studentId")} />
       </div>
+      {typeVal === "INCOME" &&
+        categoryVal === "transactions.categories.income.tuition" && (
+          <div>
+            <Label>Kỳ học phí (YYYY-MM)</Label>
+            <Controller
+              control={control}
+              name="appliedPeriod"
+              render={({ field }) => (
+                <Input
+                  type="month"
+                  value={field.value || ""}
+                  onChange={(e) => field.onChange(e.target.value)}
+                />
+              )}
+            />
+          </div>
+        )}
       <div>
         <Label>Mô tả</Label>
         <Input {...register("description")} />
@@ -1064,10 +1378,12 @@ function PersonCombobox({
   classId,
   value,
   onChange,
+  onSelectId,
 }: {
   classId: string;
   value: string;
   onChange: (val: string) => void;
+  onSelectId?: (id: string) => void;
 }) {
   const { data: students } = useStudents(classId);
   const { t } = useTranslation("common");
@@ -1113,6 +1429,7 @@ function PersonCombobox({
                     value={item.label}
                     onSelect={(val) => {
                       onChange(val);
+                      onSelectId?.(item.id);
                       setOpen(false);
                     }}>
                     <Check

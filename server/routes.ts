@@ -12,6 +12,8 @@ import {
   classes,
   classTeachers,
   classMonitors,
+  studentSuspensions,
+  students,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
@@ -728,6 +730,276 @@ export async function registerRoutes(
     }
   });
 
+  app.get(
+    api.students.suspensionsByClass.path,
+    requireAuth,
+    async (req: any, res) => {
+      const classId = req.params.classId;
+      const cls = await requireClassPermission(
+        req,
+        res,
+        classId,
+        "students_view",
+      );
+      if (!cls) return;
+      const rows = await storage.getStudentSuspensionsByClass(classId);
+      res.json(rows);
+    },
+  );
+
+  app.get(
+    api.students.suspensions.list.path,
+    requireAuth,
+    async (req: any, res) => {
+      const classId = req.params.classId;
+      const studentId = req.params.id;
+      const cls = await requireClassPermission(
+        req,
+        res,
+        classId,
+        "students_view",
+      );
+      if (!cls) return;
+      const rows = await storage.getStudentSuspensions(classId, studentId);
+      res.json(rows);
+    },
+  );
+
+  app.post(
+    api.students.suspensions.create.path,
+    requireAuth,
+    async (req: any, res) => {
+      try {
+        const classId = req.params.classId;
+        const studentId = req.params.id;
+        const cls = await requireClassPermission(
+          req,
+          res,
+          classId,
+          "students_manage",
+        );
+        if (!cls) return;
+        const input = api.students.suspensions.create.input.parse(req.body);
+        const normalize = (v?: string | null) => {
+          if (v === undefined || v === null) return v as any;
+          const s = String(v).trim();
+          if (!s) return null;
+          if (/^\d{4}$/.test(s)) return `${s}-01-01`;
+          if (/^\d{4}-\d{2}$/.test(s)) return `${s}-01`;
+          if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+          throw new Error("Invalid date format. Use YYYY-MM-DD");
+        };
+        const effectiveFrom = normalize(input.effectiveFrom);
+        const effectiveTo = normalize(input.effectiveTo ?? null);
+        if (!effectiveFrom) {
+          return res.status(400).json({ message: "effectiveFrom is required" });
+        }
+        if (effectiveTo) {
+          const a = new Date(effectiveFrom).getTime();
+          const b = new Date(effectiveTo).getTime();
+          if (isNaN(a) || isNaN(b) || b < a) {
+            return res
+              .status(400)
+              .json({ message: "effectiveTo must be >= effectiveFrom" });
+          }
+        }
+
+        const existing = await storage.getStudentSuspensions(
+          classId,
+          studentId,
+        );
+        const newStart = new Date(effectiveFrom).getTime();
+        const newEnd = effectiveTo ? new Date(effectiveTo).getTime() : Infinity;
+        for (const p of existing) {
+          const ps = new Date(p.effectiveFrom).getTime();
+          const pe = p.effectiveTo
+            ? new Date(p.effectiveTo).getTime()
+            : Infinity;
+          if (newStart <= pe && ps <= newEnd) {
+            return res
+              .status(400)
+              .json({ message: "Suspension periods cannot overlap" });
+          }
+        }
+
+        const row = await storage.createStudentSuspension({
+          classId,
+          studentId,
+          effectiveFrom,
+          effectiveTo: effectiveTo ?? null,
+          note: input.note ?? null,
+          createdBy: req.user.id,
+        } as any);
+
+        const today = new Date().toISOString().slice(0, 10);
+        const current = await storage.getStudentSuspensions(classId, studentId);
+        const isSuspendedNow = current.some((p) => {
+          const s = p.effectiveFrom;
+          const e = p.effectiveTo || "9999-12-31";
+          return s <= today && today <= e;
+        });
+        await storage.updateStudent(classId, studentId, {
+          trainingStatus: isSuspendedNow ? "SUSPEND" : "ACTIVE",
+        } as any);
+
+        res.status(201).json(row);
+      } catch (err) {
+        if (err instanceof Error && /Invalid date format/.test(err.message)) {
+          return res.status(400).json({ message: err.message, field: "date" });
+        }
+        if (err instanceof z.ZodError) {
+          return res.status(400).json({ message: err.errors[0].message });
+        }
+        res.status(500).json({ message: "Internal Error" });
+      }
+    },
+  );
+
+  app.patch(
+    api.students.suspensions.update.path,
+    requireAuth,
+    async (req: any, res) => {
+      try {
+        const classId = req.params.classId;
+        const studentId = req.params.id;
+        const suspensionId = req.params.suspensionId;
+        const cls = await requireClassPermission(
+          req,
+          res,
+          classId,
+          "students_manage",
+        );
+        if (!cls) return;
+        const input = api.students.suspensions.update.input.parse(req.body);
+        const normalize = (v?: string | null) => {
+          if (v === undefined || v === null) return v as any;
+          const s = String(v).trim();
+          if (!s) return null;
+          if (/^\d{4}$/.test(s)) return `${s}-01-01`;
+          if (/^\d{4}-\d{2}$/.test(s)) return `${s}-01`;
+          if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+          throw new Error("Invalid date format. Use YYYY-MM-DD");
+        };
+
+        const existing = await storage.getStudentSuspensions(
+          classId,
+          studentId,
+        );
+        const target = existing.find((p) => p.id === suspensionId);
+        if (!target) return res.status(404).json({ message: "Not found" });
+
+        const nextFrom =
+          input.effectiveFrom !== undefined
+            ? normalize(input.effectiveFrom)
+            : target.effectiveFrom;
+        const nextTo =
+          input.effectiveTo !== undefined
+            ? normalize(input.effectiveTo ?? null)
+            : target.effectiveTo;
+        if (!nextFrom) {
+          return res.status(400).json({ message: "effectiveFrom is required" });
+        }
+        if (nextTo) {
+          const a = new Date(nextFrom).getTime();
+          const b = new Date(nextTo).getTime();
+          if (isNaN(a) || isNaN(b) || b < a) {
+            return res
+              .status(400)
+              .json({ message: "effectiveTo must be >= effectiveFrom" });
+          }
+        }
+
+        const newStart = new Date(nextFrom).getTime();
+        const newEnd = nextTo ? new Date(nextTo).getTime() : Infinity;
+        for (const p of existing) {
+          if (p.id === suspensionId) continue;
+          const ps = new Date(p.effectiveFrom).getTime();
+          const pe = p.effectiveTo
+            ? new Date(p.effectiveTo).getTime()
+            : Infinity;
+          if (newStart <= pe && ps <= newEnd) {
+            return res
+              .status(400)
+              .json({ message: "Suspension periods cannot overlap" });
+          }
+        }
+
+        const updated = await storage.updateStudentSuspension(
+          classId,
+          studentId,
+          suspensionId,
+          {
+            effectiveFrom: nextFrom,
+            effectiveTo: nextTo ?? null,
+            note: input.note === undefined ? target.note : (input.note ?? null),
+          } as any,
+        );
+        if (!updated) return res.status(404).json({ message: "Not found" });
+
+        const today = new Date().toISOString().slice(0, 10);
+        const current = await storage.getStudentSuspensions(classId, studentId);
+        const isSuspendedNow = current.some((p) => {
+          const s = p.effectiveFrom;
+          const e = p.effectiveTo || "9999-12-31";
+          return s <= today && today <= e;
+        });
+        await storage.updateStudent(classId, studentId, {
+          trainingStatus: isSuspendedNow ? "SUSPEND" : "ACTIVE",
+        } as any);
+
+        res.json(updated);
+      } catch (err) {
+        if (err instanceof Error && /Invalid date format/.test(err.message)) {
+          return res.status(400).json({ message: err.message, field: "date" });
+        }
+        if (err instanceof z.ZodError) {
+          return res.status(400).json({ message: err.errors[0].message });
+        }
+        res.status(500).json({ message: "Internal Error" });
+      }
+    },
+  );
+
+  app.delete(
+    api.students.suspensions.delete.path,
+    requireAuth,
+    async (req: any, res) => {
+      try {
+        const classId = req.params.classId;
+        const studentId = req.params.id;
+        const suspensionId = req.params.suspensionId;
+        const cls = await requireClassPermission(
+          req,
+          res,
+          classId,
+          "students_manage",
+        );
+        if (!cls) return;
+        const ok = await storage.deleteStudentSuspension(
+          classId,
+          studentId,
+          suspensionId,
+        );
+        if (!ok) return res.status(404).json({ message: "Not found" });
+
+        const today = new Date().toISOString().slice(0, 10);
+        const current = await storage.getStudentSuspensions(classId, studentId);
+        const isSuspendedNow = current.some((p) => {
+          const s = p.effectiveFrom;
+          const e = p.effectiveTo || "9999-12-31";
+          return s <= today && today <= e;
+        });
+        await storage.updateStudent(classId, studentId, {
+          trainingStatus: isSuspendedNow ? "SUSPEND" : "ACTIVE",
+        } as any);
+
+        res.json({ success: true });
+      } catch {
+        res.status(500).json({ message: "Internal Error" });
+      }
+    },
+  );
+
   // Transactions
   app.get(api.transactions.list.path, requireAuth, async (req: any, res) => {
     const classId = req.params.classId;
@@ -757,6 +1029,8 @@ export async function registerRoutes(
         ...input,
         description: input.description ?? null,
         person: input.person ?? null,
+        appliedPeriod: input.appliedPeriod ?? null,
+        studentId: input.studentId ?? null,
         note: input.note ?? null,
         classId,
         amount: input.amount.toString(),
@@ -944,6 +1218,8 @@ async function seedDatabase() {
       description: "Tuition fee for March",
       person: "Nguyen Van A",
       note: "",
+      appliedPeriod: new Date().toISOString().slice(0, 7),
+      studentId: null,
       date: new Date().toISOString().split("T")[0],
       createdBy: teacher.id,
     });
@@ -956,6 +1232,8 @@ async function seedDatabase() {
       description: "Books and printing",
       person: "Bookstore",
       note: "",
+      appliedPeriod: null,
+      studentId: null,
       date: new Date().toISOString().split("T")[0],
       createdBy: teacher.id,
     });
