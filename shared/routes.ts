@@ -12,6 +12,7 @@ import {
   studentSuspensions,
   transactions,
   attendances,
+  classOffDays,
 } from "./schema";
 
 export const errorSchemas = {
@@ -77,6 +78,22 @@ export const api = {
       }),
       responses: {
         201: z.custom<typeof classes.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+    updateSchedule: {
+      method: "PATCH" as const,
+      path: "/api/classes/:id/schedule" as const,
+      input: z.object({
+        scheduleDays: z
+          .array(
+            z.enum(["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"])
+          )
+          .nullable(),
+      }),
+      responses: {
+        200: z.custom<typeof classes.$inferSelect>(),
+        404: errorSchemas.notFound,
         400: errorSchemas.validation,
       },
     },
@@ -343,6 +360,30 @@ export const api = {
         201: z.object({ success: z.boolean() }),
         400: errorSchemas.validation,
       },
+    },
+  },
+  offDays: {
+    get: {
+      method: "GET" as const,
+      path: "/api/classes/:classId/off-days" as const,
+      input: z.object({ date: z.string().optional() }).optional(),
+      responses: {
+        200: z.array(z.custom<typeof classOffDays.$inferSelect>()),
+      },
+    },
+    set: {
+      method: "POST" as const,
+      path: "/api/classes/:classId/off-days" as const,
+      input: z.object({
+        date: z.string(),
+        reason: z.string().min(1),
+      }),
+      responses: { 201: z.object({ success: z.boolean() }) },
+    },
+    clear: {
+      method: "DELETE" as const,
+      path: "/api/classes/:classId/off-days/:date" as const,
+      responses: { 200: z.object({ success: z.boolean() }) },
     },
   },
 };

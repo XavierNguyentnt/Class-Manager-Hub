@@ -8,13 +8,14 @@ import {
   useClassMonitors,
   useAddClassMonitor,
   useRemoveClassMonitor,
+  useUpdateClassSchedule,
 } from "@/hooks/use-classes";
 import { useTeachers } from "@/hooks/use-teachers";
 import { useMonitors } from "@/hooks/use-monitors";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import {
   Card,
@@ -62,6 +63,7 @@ export default function ClassDashboard() {
   const removeClassTeacher = useRemoveClassTeacher(classId);
   const addClassMonitor = useAddClassMonitor(classId);
   const removeClassMonitor = useRemoveClassMonitor(classId);
+  const updateSchedule = useUpdateClassSchedule(classId);
   const { t } = useTranslation("common");
   const [selectedTeacher, setSelectedTeacher] = useState<string>("");
   const [selectedTeacherRole, setSelectedTeacherRole] = useState<
@@ -71,6 +73,45 @@ export default function ClassDashboard() {
   const [selectedMonitorRole, setSelectedMonitorRole] = useState<
     "CLASS_MONITOR" | "VICE_MONITOR"
   >("CLASS_MONITOR");
+
+  type Day = "SUN" | "MON" | "TUE" | "WED" | "THU" | "FRI" | "SAT";
+  const initialSchedule = useMemo<string[]>(() => {
+    return (cls as any)?.scheduleDays ?? [];
+  }, [cls]);
+  const [schedule, setSchedule] = useState<Day[]>(initialSchedule as Day[]);
+  const [isEditingSchedule, setIsEditingSchedule] = useState(false);
+  const [baseline, setBaseline] = useState<Day[]>(initialSchedule as Day[]);
+  // Sync local state if class changes and not currently editing
+  if (!isEditingSchedule) {
+    // basic guard against repeated sets on every render
+    if (JSON.stringify(baseline) !== JSON.stringify(initialSchedule)) {
+      setBaseline(initialSchedule as Day[]);
+      setSchedule(initialSchedule as Day[]);
+    }
+  }
+
+  const toggleDay = (day: Day) => {
+    setSchedule((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
+    );
+  };
+
+  const saveSchedule = async () => {
+    try {
+      await updateSchedule.mutateAsync({
+        scheduleDays: schedule.length ? schedule : [],
+      });
+      toast({ title: t("dashboard.saveSchedule") });
+      setIsEditingSchedule(false);
+      setBaseline(schedule);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
+    }
+  };
 
   if (isClassLoading || isDashboardLoading) {
     return (
@@ -105,6 +146,70 @@ export default function ClassDashboard() {
         </h1>
         <p className="text-muted-foreground mt-1">{t("dashboard.subtitle")}</p>
       </div>
+      <Card className="shadow-sm border-border/50">
+        <CardHeader>
+          <CardTitle className="font-display">
+            {t("dashboard.scheduleTitle")}
+          </CardTitle>
+          <CardDescription>{t("classes.schedule")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 mb-4">
+            {[
+              { code: "SUN" as Day, label: t("classes.schedule.days.sun") },
+              { code: "MON" as Day, label: t("classes.schedule.days.mon") },
+              { code: "TUE" as Day, label: t("classes.schedule.days.tue") },
+              { code: "WED" as Day, label: t("classes.schedule.days.wed") },
+              { code: "THU" as Day, label: t("classes.schedule.days.thu") },
+              { code: "FRI" as Day, label: t("classes.schedule.days.fri") },
+              { code: "SAT" as Day, label: t("classes.schedule.days.sat") },
+            ].map((d) => (
+              <button
+                key={d.code}
+                type="button"
+                onClick={() => isEditingSchedule && toggleDay(d.code)}
+                disabled={!isEditingSchedule}
+                className={[
+                  "px-3 py-2 rounded-md border text-sm transition-colors",
+                  schedule.includes(d.code)
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-foreground border-border hover:bg-muted",
+                  !isEditingSchedule ? "opacity-90 cursor-not-allowed" : "",
+                ].join(" ")}>
+                {d.label}
+              </button>
+            ))}
+          </div>
+          {!isEditingSchedule ? (
+            <Button type="button" onClick={() => setIsEditingSchedule(true)}>
+              {t("dashboard.editSchedule")}
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={saveSchedule}
+                disabled={
+                  updateSchedule.isPending ||
+                  JSON.stringify(schedule) === JSON.stringify(baseline)
+                }>
+                {updateSchedule.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
+                {t("dashboard.saveSchedule")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setSchedule(baseline);
+                  setIsEditingSchedule(false);
+                }}>
+                {t("dashboard.cancelEdit")}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
       {user?.role === "ADMIN" && (
         <div className="bg-card border border-border/50 rounded-xl p-4 space-y-3">
           <div className="text-sm font-medium">
@@ -402,7 +507,9 @@ export default function ClassDashboard() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: "hsl(var(--muted-foreground))" }}
-                  tickFormatter={(value: any) => formatVNDCompact(Number(value))}
+                  tickFormatter={(value: any) =>
+                    formatVNDCompact(Number(value))
+                  }
                 />
                 <Tooltip
                   cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}

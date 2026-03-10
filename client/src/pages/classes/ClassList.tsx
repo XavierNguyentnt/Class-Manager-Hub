@@ -88,6 +88,39 @@ export default function ClassList() {
                   className="resize-none"
                 />
               </div>
+              <div className="space-y-2">
+                <Label>{t("classes.schedule")}</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" value="SUN" {...register("scheduleDays")} />
+                    <span>{t("classes.schedule.days.sun")}</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" value="MON" {...register("scheduleDays")} />
+                    <span>{t("classes.schedule.days.mon")}</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" value="TUE" {...register("scheduleDays")} />
+                    <span>{t("classes.schedule.days.tue")}</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" value="WED" {...register("scheduleDays")} />
+                    <span>{t("classes.schedule.days.wed")}</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" value="THU" {...register("scheduleDays")} />
+                    <span>{t("classes.schedule.days.thu")}</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" value="FRI" {...register("scheduleDays")} />
+                    <span>{t("classes.schedule.days.fri")}</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input type="checkbox" value="SAT" {...register("scheduleDays")} />
+                    <span>{t("classes.schedule.days.sat")}</span>
+                  </label>
+                </div>
+              </div>
               {user?.role === "ADMIN" && (
                 <div className="space-y-2">
                   <Label htmlFor="teacherId">{t("classes.assignTeacher")}</Label>

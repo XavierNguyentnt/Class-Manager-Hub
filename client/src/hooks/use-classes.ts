@@ -199,3 +199,23 @@ export function useRemoveClassMonitor(id: string | number) {
     },
   });
 }
+
+export function useUpdateClassSchedule(id: string | number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: z.infer<typeof api.classes.updateSchedule.input>) => {
+      const url = buildUrl(api.classes.updateSchedule.path, { id });
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update schedule");
+      return api.classes.updateSchedule.responses[200].parse(await res.json());
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.classes.get.path, id] });
+    },
+  });
+}

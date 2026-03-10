@@ -79,8 +79,11 @@ export default function StudentList() {
   const deleteStudent = useDeleteStudent(classId);
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<
+    "NAME_ASC" | "NAME_DESC" | "STATUS_ASC" | "STATUS_DESC"
+  >("NAME_ASC");
   const [editOpen, setEditOpen] = useState<string | null>(null);
-  const { t } = useTranslation("common");
+  const { t, i18n } = useTranslation("common");
 
   const {
     register,
@@ -379,11 +382,19 @@ export default function StudentList() {
                   <Label htmlFor="trainingStatus">
                     {t("students.trainingStatus")}
                   </Label>
-                  <Input
-                    id="trainingStatus"
-                    placeholder="..."
-                    {...register("trainingStatus")}
-                  />
+                  <Select
+                    onValueChange={(v) =>
+                      setValue("trainingStatus" as any, v as any)
+                    }>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn trạng thái" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ACTIVE">Active</SelectItem>
+                      <SelectItem value="INACTIVE">Inactive</SelectItem>
+                      <SelectItem value="SUSPEND">Suspend</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2 xl:col-span-2">
                   <Label htmlFor="parentPhone">
@@ -435,176 +446,290 @@ export default function StudentList() {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader className="bg-muted/50">
-                <TableRow>
-                  <TableHead className="w-[300px]">
-                    {t("students.table.name")}
-                  </TableHead>
-                  <TableHead>{t("students.table.contact")}</TableHead>
-                  <TableHead>{t("students.table.parentContact")}</TableHead>
-                  <TableHead>{t("students.table.dob")}</TableHead>
-                  <TableHead>{t("students.note")}</TableHead>
-                  <TableHead className="w-[140px] text-right"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students?.map((student) => (
-                  <TableRow
-                    key={student.id}
-                    className="hover:bg-muted/30 transition-colors">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                          {(student.lastName || student.firstName)
-                            .charAt(0)
-                            .toUpperCase()}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span>
-                            {formatFullName(
-                              student.firstName,
-                              student.lastName,
-                            )}
-                          </span>
-                          {student.trainingStatus && (
-                            <Badge variant="outline">
+            <>
+              <div className="p-4 flex justify-end">
+                <Select
+                  value={sortBy}
+                  onValueChange={(v) => setSortBy(v as any)}>
+                  <SelectTrigger className="w-[220px]">
+                    <SelectValue placeholder="Sắp xếp" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="NAME_ASC">Tên (A–Z)</SelectItem>
+                    <SelectItem value="NAME_DESC">Tên (Z–A)</SelectItem>
+                    <SelectItem value="STATUS_ASC">Trạng thái A–Z</SelectItem>
+                    <SelectItem value="STATUS_DESC">Trạng thái Z–A</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Table>
+                <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                  <TableRow>
+                    <TableHead className="w-[300px]">
+                      {t("students.table.name")}
+                    </TableHead>
+                    <TableHead>{t("students.table.trainingStatus")}</TableHead>
+                    <TableHead>{t("students.table.contact")}</TableHead>
+                    <TableHead>{t("students.table.parentContact")}</TableHead>
+                    <TableHead>{t("students.table.dob")}</TableHead>
+                    <TableHead>{t("students.note")}</TableHead>
+                    <TableHead className="w-[140px] text-right"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...(students || [])]
+                    .sort((a, b) => {
+                      const lnA = (a.lastName || "").toLowerCase();
+                      const lnB = (b.lastName || "").toLowerCase();
+                      const fnA = (a.firstName || "").toLowerCase();
+                      const fnB = (b.firstName || "").toLowerCase();
+                      const orderStatus = (s?: string | null) =>
+                        s === "ACTIVE"
+                          ? 0
+                          : s === "INACTIVE"
+                            ? 1
+                            : s === "SUSPEND"
+                              ? 2
+                              : 3;
+                      if (sortBy === "NAME_ASC") {
+                        const cmp = lnA.localeCompare(lnB);
+                        return cmp !== 0 ? cmp : fnA.localeCompare(fnB);
+                      }
+                      if (sortBy === "NAME_DESC") {
+                        const cmp = lnB.localeCompare(lnA);
+                        return cmp !== 0 ? cmp : fnB.localeCompare(fnA);
+                      }
+                      if (sortBy === "STATUS_ASC")
+                        return (
+                          orderStatus(a.trainingStatus) -
+                          orderStatus(b.trainingStatus)
+                        );
+                      if (sortBy === "STATUS_DESC")
+                        return (
+                          orderStatus(b.trainingStatus) -
+                          orderStatus(a.trainingStatus)
+                        );
+                      return 0;
+                    })
+                    .map((student) => (
+                      <TableRow
+                        key={student.id}
+                        className="hover:bg-muted/30 transition-colors">
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                              {(student.lastName || student.firstName)
+                                .charAt(0)
+                                .toUpperCase()}
+                            </div>
+                            <span>
+                              {formatFullName(
+                                student.firstName,
+                                student.lastName,
+                              )}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {student.trainingStatus ? (
+                            <Badge
+                              variant="outline"
+                              className={
+                                student.trainingStatus === "ACTIVE"
+                                  ? "bg-emerald-500/10 text-emerald-600 border-emerald-200"
+                                  : student.trainingStatus === "SUSPEND"
+                                    ? "bg-amber-500/10 text-amber-600 border-amber-200"
+                                    : "bg-muted text-foreground border-border"
+                              }>
                               {student.trainingStatus}
                             </Badge>
+                          ) : (
+                            <span className="text-muted-foreground/50">-</span>
                           )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {student.phone ? (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Phone className="w-3 h-3 mr-2" /> {student.phone}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground/50">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {student.parentPhone ? (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Phone className="w-3 h-3 mr-2 text-indigo-400" />{" "}
-                          {student.parentPhone}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground/50">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {student.dateOfBirth ? (
-                        <div className="flex items-center text-sm">
-                          <Calendar className="w-3 h-3 mr-2 text-muted-foreground" />
-                          {formatDateDisplay(student.dateOfBirth)}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground/50">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                      {student.note || "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              View
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-[600px]">
-                            <DialogHeader>
-                              <DialogTitle>Student Details</DialogTitle>
-                              <DialogDescription>
-                                {formatFullName(
-                                  student.firstName,
-                                  student.lastName,
-                                )}
-                              </DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-2 text-sm">
-                              <div>
-                                Gender: {(student as any).gender || "-"}
-                              </div>
-                              <div>
-                                DOB:{" "}
-                                {student.dateOfBirth
-                                  ? formatDateDisplay(student.dateOfBirth)
-                                  : "-"}
-                              </div>
-                              <div>Phone: {student.phone || "-"}</div>
-                              <div>
-                                Parent Phone: {student.parentPhone || "-"}
-                              </div>
-                              <div>
-                                Nationality: {student.nationality || "-"}
-                              </div>
-                              <div>
-                                Start Date:{" "}
-                                {student.startDate
-                                  ? formatDateDisplay(student.startDate)
-                                  : "-"}
-                              </div>
-                              <div>Level: {student.level || "-"}</div>
-                              <div>Health: {student.healthStatus || "-"}</div>
-                              <div>Address: {student.address || "-"}</div>
-                              <div>Occupation: {student.occupation || "-"}</div>
-                              <div>Height (cm): {student.height || "-"}</div>
-                              <div>Weight (kg): {student.weight || "-"}</div>
-                              <div>Status: {student.trainingStatus || "-"}</div>
-                              <div>Note: {student.note || "-"}</div>
+                        </TableCell>
+                        <TableCell>
+                          {student.phone ? (
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Phone className="w-3 h-3 mr-2" /> {student.phone}
                             </div>
-                          </DialogContent>
-                        </Dialog>
-                        <Dialog
-                          open={editOpen === student.id}
-                          onOpenChange={(v) =>
-                            setEditOpen(v ? student.id : null)
-                          }>
-                          <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                              Edit
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-[600px]">
-                            <DialogHeader>
-                              <DialogTitle>Edit Student</DialogTitle>
-                              <DialogDescription>
-                                {t("students.addSubtitle")}
-                              </DialogDescription>
-                            </DialogHeader>
-                            <EditStudentForm
-                              initial={student}
-                              onCancel={() => setEditOpen(null)}
-                              onSave={(data) => onUpdate(student.id, data)}
-                            />
-                          </DialogContent>
-                        </Dialog>
-                        <Select
-                          onValueChange={(v) =>
-                            onChangeStatus(student.id, v as any)
-                          }
-                          defaultValue={
-                            (student.trainingStatus as any) || "ACTIVE"
-                          }>
-                          <SelectTrigger className="w-[160px]">
-                            <SelectValue placeholder="Trạng thái" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ACTIVE">Active</SelectItem>
-                            <SelectItem value="INACTIVE">Inactive</SelectItem>
-                            <SelectItem value="SUSPEND">Suspend</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                          ) : (
+                            <span className="text-muted-foreground/50">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {student.parentPhone ? (
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Phone className="w-3 h-3 mr-2 text-indigo-400" />{" "}
+                              {student.parentPhone}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground/50">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {student.dateOfBirth ? (
+                            <div className="flex items-center text-sm">
+                              <Calendar className="w-3 h-3 mr-2 text-muted-foreground" />
+                              {formatDateDisplay(student.dateOfBirth)}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground/50">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                          {student.note || "-"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  View
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="sm:max-w-[600px]">
+                                <DialogHeader>
+                                  <DialogTitle>
+                                    {(() => {
+                                      const other =
+                                        i18n.language === "vi" ? "en" : "vi";
+                                      const otherText = i18n.t(
+                                        "students.details.title",
+                                        {
+                                          ns: "common",
+                                          lng: other,
+                                        },
+                                      ) as string;
+                                      return `${t("students.details.title")} (${otherText})`;
+                                    })()}
+                                  </DialogTitle>
+                                  <DialogDescription>
+                                    {formatFullName(
+                                      student.firstName,
+                                      student.lastName,
+                                    )}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-2 text-sm">
+                                  {(() => {
+                                    const other =
+                                      i18n.language === "vi" ? "en" : "vi";
+                                    const lbl = (key: string) => {
+                                      const otherText = i18n.t(key, {
+                                        ns: "common",
+                                        lng: other,
+                                      }) as string;
+                                      return `${t(key)} (${otherText})`;
+                                    };
+                                    const genderLabel = (g?: string | null) =>
+                                      g ? (t(`gender.${g}`) as string) : "-";
+                                    const statusLabel = (s?: string | null) =>
+                                      s
+                                        ? (t(`trainingStatus.${s}`) as string)
+                                        : "-";
+                                    return (
+                                      <>
+                                        <div>
+                                          {lbl("students.details.gender")}:{" "}
+                                          {genderLabel((student as any).gender)}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.dob")}:{" "}
+                                          {student.dateOfBirth
+                                            ? formatDateDisplay(
+                                                student.dateOfBirth,
+                                              )
+                                            : "-"}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.phone")}:{" "}
+                                          {student.phone || "-"}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.parentPhone")}:{" "}
+                                          {student.parentPhone || "-"}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.nationality")}:{" "}
+                                          {student.nationality || "-"}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.startDate")}:{" "}
+                                          {student.startDate
+                                            ? formatDateDisplay(
+                                                student.startDate,
+                                              )
+                                            : "-"}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.level")}:{" "}
+                                          {student.level || "-"}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.health")}:{" "}
+                                          {student.healthStatus || "-"}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.address")}:{" "}
+                                          {student.address || "-"}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.occupation")}:{" "}
+                                          {student.occupation || "-"}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.heightCm")}:{" "}
+                                          {student.height || "-"}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.weightKg")}:{" "}
+                                          {student.weight || "-"}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.status")}:{" "}
+                                          {statusLabel(student.trainingStatus)}
+                                        </div>
+                                        <div>
+                                          {lbl("students.details.note")}:{" "}
+                                          {student.note || "-"}
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                            <Dialog
+                              open={editOpen === student.id}
+                              onOpenChange={(v) =>
+                                setEditOpen(v ? student.id : null)
+                              }>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                  Edit
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="sm:max-w-[600px]">
+                                <DialogHeader>
+                                  <DialogTitle>Edit Student</DialogTitle>
+                                  <DialogDescription>
+                                    {t("students.addSubtitle")}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                <EditStudentForm
+                                  initial={student}
+                                  onCancel={() => setEditOpen(null)}
+                                  onSave={(data) => onUpdate(student.id, data)}
+                                />
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </>
           )}
         </CardContent>
       </Card>
@@ -798,7 +923,18 @@ function EditStudentForm({
         </div>
         <div>
           <Label>Tình trạng tập luyện</Label>
-          <Input {...register("trainingStatus")} />
+          <Select
+            onValueChange={(v) => setValue("trainingStatus", v)}
+            defaultValue={initial.trainingStatus || ""}>
+            <SelectTrigger>
+              <SelectValue placeholder="Chọn trạng thái" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ACTIVE">Active</SelectItem>
+              <SelectItem value="INACTIVE">Inactive</SelectItem>
+              <SelectItem value="SUSPEND">Suspend</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="col-span-2">
           <Label>Ghi chú</Label>

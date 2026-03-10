@@ -18,8 +18,21 @@ CREATE TABLE IF NOT EXISTS classes (
   name TEXT NOT NULL,
   description TEXT,
   teacher_id UUID NOT NULL REFERENCES users(id),
+  schedule_days JSONB,
   created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Ensure schedule_days exists even if classes table was created earlier
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_name = 'classes' AND column_name = 'schedule_days'
+  ) THEN
+    ALTER TABLE classes ADD COLUMN schedule_days JSONB;
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS class_monitors (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -60,6 +73,15 @@ CREATE TABLE IF NOT EXISTS attendances (
   date TEXT NOT NULL,
   status TEXT NOT NULL,
   note TEXT,
+  created_by UUID NOT NULL REFERENCES users(id),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS class_off_days (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  date TEXT NOT NULL,
+  reason TEXT,
   created_by UUID NOT NULL REFERENCES users(id),
   created_at TIMESTAMP DEFAULT NOW()
 );
